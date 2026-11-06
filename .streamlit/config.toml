@@ -4,9 +4,21 @@ primaryColor = "#4EA4EF"
 backgroundColor = "#FFFFFF"
 secondaryBackgroundColor = "#DAE2ED"
 textColor = "#141521"
-font = "Noto Serif CJK SC, serif"
-headingFont = "Noto Serif CJK SC, serif"
+font = "Cormorant Garamond, Noto Serif CJK SC, serif"
+headingFont = "Cormorant Garamond, Noto Serif CJK SC, serif"
 headingFontSizes = ["2.3rem", "1.8rem", "1.4rem"]
+
+[[theme.fontFaces]]
+family = "Cormorant Garamond"
+url = "app/static/fonts/cormorant-garamond.woff2"
+weight = "300 700"
+style = "normal"
+
+[[theme.fontFaces]]
+family = "Cormorant Garamond"
+url = "app/static/fonts/cormorant-garamond-italic.woff2"
+weight = "300 700"
+style = "italic"
 
 [[theme.fontFaces]]
 family = "Noto Serif CJK SC"

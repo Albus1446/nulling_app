@@ -26,14 +26,22 @@ SIGNED_CMAP = LinearSegmentedColormap.from_list("nulling_signed", [WARM, "#FFFFF
 FONT_PATH = Path(__file__).resolve().parent / "assets/fonts/NotoSerifCJKsc-Regular.otf"
 font_manager.fontManager.addfont(str(FONT_PATH))
 FONT_FAMILY = font_manager.FontProperties(fname=str(FONT_PATH)).get_name()
+LATIN_FONT_PATH = FONT_PATH.parent / "CormorantGaramond-Regular.ttf"
+for font_file in [LATIN_FONT_PATH, FONT_PATH.parent / "CormorantGaramond-Bold.ttf",
+                  FONT_PATH.parent / "CormorantGaramond-Italic.ttf"]:
+    font_manager.fontManager.addfont(str(font_file))
+LATIN_FONT_FAMILY = font_manager.FontProperties(fname=str(LATIN_FONT_PATH)).get_name()
 
 MAS = np.pi / 180 / 3600 / 1000
 
 
 def style():
     plt.rcParams.update({
-        "font.family": "serif",
-        "font.serif": [FONT_FAMILY, "DejaVu Serif"],
+        "font.family": [LATIN_FONT_FAMILY, FONT_FAMILY, "DejaVu Serif"],
+        "font.serif": [LATIN_FONT_FAMILY, FONT_FAMILY, "DejaVu Serif"],
+        "mathtext.fontset": "custom", "mathtext.rm": LATIN_FONT_FAMILY,
+        "mathtext.it": LATIN_FONT_FAMILY + ":italic",
+        "mathtext.bf": LATIN_FONT_FAMILY + ":bold", "mathtext.fallback": "stix",
         "text.color": NAVY, "axes.labelcolor": NAVY, "axes.edgecolor": NAVY,
         "xtick.color": NAVY, "ytick.color": NAVY,
         "axes.unicode_minus": False, "font.size": 10, "axes.titlesize": 11, "axes.labelsize": 10,

@@ -1,6 +1,6 @@
 # 从光的干涉到四集光器消零
 
-中文 Streamlit 单页互动讲义，使用 Noto Serif CJK SC 字体。先学习三个概念，再看合光矩阵，最后用目标参数驱动天空贡献图。
+中文 Streamlit 单页互动讲义。中文使用 Noto Serif CJK SC，数字、拉丁字母与常规符号优先使用 Cormorant Garamond。先学习三个概念，再看合光矩阵，最后用目标参数驱动天空贡献图。
 
 ## 运行
 
@@ -38,7 +38,7 @@ streamlit run app.py
 
 ## 字体与部署
 
-页面和图件均使用 [Noto Serif CJK SC](https://github.com/notofonts/noto-cjk/tree/main/Serif/OTF/SimplifiedChinese)。图件读取 `assets/fonts/NotoSerifCJKsc-Regular.otf`，页面使用同字体的本地 WOFF2 子集，授权见 `assets/fonts/OFL-Serif.txt`。通过 Streamlit 静态文件服务分发，无外部字体服务。
+页面和图件使用混合字体：非中文文字优先采用 [Cormorant Garamond](https://github.com/google/fonts/tree/main/ofl/cormorantgaramond)，中文回退到 [Noto Serif CJK SC](https://github.com/notofonts/noto-cjk/tree/main/Serif/OTF/SimplifiedChinese)。页面使用本地 WOFF2，图件使用项目内的静态 TTF/OTF；授权见 `assets/fonts/`。缺失符号保留兼容字体回退，网页公式继续使用 KaTeX 的数学字形与排版。所有字体通过项目分发，无外部字体服务。
 
 运行时固定为已验证的 `streamlit==1.65.0`。依赖更新后等待 Community Cloud 重新构建，再刷新旧标签页。若浏览器仍显示模块导入失败，应核对失败静态资源的 HTTP 状态；版本固定不会修复托管平台自身的资源故障。
 
