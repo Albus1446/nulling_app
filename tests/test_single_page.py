@@ -25,42 +25,42 @@ class SinglePageTests(unittest.TestCase):
 
     def test_all_sections_and_simulation_actions(self):
         app = self.app()
-        self.assertEqual(len(app.radio(key="curriculum_section").options), 8)
-        for section in range(1, 9):
+        self.assertEqual(len(app.radio(key="curriculum_section").options), 7)
+        for section in range(1, 8):
             with self.subTest(section=section):
                 self.select(app, section)
 
-        self.select(app, 5)
-        app.slider(key="lesson_5_ts").set_value(5779.0).run()
+        self.select(app, 4)
+        app.slider(key="lesson_4_ts").set_value(5779.0).run()
         self.assert_no_error(app)
-        self.assertEqual(app.slider(key="lesson_5_ts").value, 5779.0)
-        app.slider(key="lesson_5_rp").set_value(2.0).run()
+        self.assertEqual(app.slider(key="lesson_4_ts").value, 5779.0)
+        app.slider(key="lesson_4_rp").set_value(2.0).run()
         self.assert_no_error(app)
-        app.radio(key="lesson_5_component").set_value("行星").run()
+        app.radio(key="lesson_4_component").set_value("行星").run()
         self.assert_no_error(app)
 
         self.assertTrue(any(h.value == "暗输出里的光子从哪里来" for h in app.header))
         self.assertTrue(any(h.value == "在当前条件下，能找到行星吗？" for h in app.header))
-        seed = app.session_state["seed5"]
-        app.button(key="action_5_resample").click().run()
+        seed = app.session_state["seed4"]
+        app.button(key="action_4_resample").click().run()
         self.assert_no_error(app)
-        self.assertEqual(app.session_state["seed5"], seed + 1)
-        app.button(key="action_5_simulate").click().run()
+        self.assertEqual(app.session_state["seed4"], seed + 1)
+        app.button(key="action_4_simulate").click().run()
         self.assert_no_error(app)
         self.assertTrue(any("/ 100" in metric.value for metric in app.metric))
 
-        self.select(app, 6)
+        self.select(app, 5)
         self.assertFalse(any("不同位置，不同指纹" in h.value for h in app.header))
-        self.select(app, 7)
+        self.select(app, 6)
         self.assertFalse(any(h.value == "暗输出里的光子从哪里来" for h in app.header))
-        self.select(app, 8)
+        self.select(app, 7)
         seed = app.session_state['matched_seed']
         before = float(app.metric[0].value)
-        app.slider(key='lesson_8_separation').set_value(115.).run()
+        app.slider(key='lesson_7_separation').set_value(115.).run()
         self.assert_no_error(app)
         self.assertEqual(app.session_state['matched_seed'], seed)
         self.assertGreater(float(app.metric[0].value), before)
-        app.button(key='action_8_resample').click().run()
+        app.button(key='action_7_resample').click().run()
         self.assert_no_error(app)
         self.assertEqual(app.session_state['matched_seed'], seed+1)
 
@@ -74,8 +74,8 @@ class SinglePageTests(unittest.TestCase):
         app.slider(key="lesson_2_D").set_value(20.0).run()
         self.assert_no_error(app)
         self.select(app, 3)
-        self.assertEqual(app.slider(key="lesson_3_b3").value, 14.5)
-        app.slider(key="lesson_3_b3").set_value(8.0).run()
+        self.assertEqual(app.slider(key="lesson_3_amp").value, 1.0)
+        app.slider(key="lesson_3_amp").set_value(1.1).run()
         self.assert_no_error(app)
 
         self.select(app, 1)
@@ -84,11 +84,11 @@ class SinglePageTests(unittest.TestCase):
         self.select(app, 2)
         self.assertEqual(app.slider(key="lesson_2_D").value, 20.0)
         self.select(app, 3)
-        self.assertEqual(app.slider(key="lesson_3_b3").value, 8.0)
+        self.assertEqual(app.slider(key="lesson_3_amp").value, 1.1)
 
     def test_original_entry_opens_the_same_single_page_app(self):
         app = self.app("首页.py")
-        self.assertEqual(len(app.radio(key="curriculum_section").options), 8)
+        self.assertEqual(len(app.radio(key="curriculum_section").options), 7)
         self.select(app, 1)
         self.assertEqual(app.slider(key="lesson_1_dphi").value, 150)
 
