@@ -39,14 +39,30 @@ class SinglePageTests(unittest.TestCase):
         app.radio(key="lesson_5_component").set_value("行星").run()
         self.assert_no_error(app)
 
-        self.select(app, 8)
-        seed = app.session_state["seed8"]
-        app.button(key="action_8_resample").click().run()
+        self.assertTrue(any(h.value == "暗输出里的光子从哪里来" for h in app.header))
+        self.assertTrue(any(h.value == "在当前条件下，能找到行星吗？" for h in app.header))
+        seed = app.session_state["seed5"]
+        app.button(key="action_5_resample").click().run()
         self.assert_no_error(app)
-        self.assertEqual(app.session_state["seed8"], seed + 1)
-        app.button(key="action_8_simulate").click().run()
+        self.assertEqual(app.session_state["seed5"], seed + 1)
+        app.button(key="action_5_simulate").click().run()
         self.assert_no_error(app)
         self.assertTrue(any("/ 100" in metric.value for metric in app.metric))
+
+        self.select(app, 6)
+        self.assertFalse(any("不同位置，不同指纹" in h.value for h in app.header))
+        self.select(app, 7)
+        self.assertFalse(any(h.value == "暗输出里的光子从哪里来" for h in app.header))
+        self.select(app, 8)
+        seed = app.session_state['matched_seed']
+        before = float(app.metric[0].value)
+        app.slider(key='lesson_8_separation').set_value(115.).run()
+        self.assert_no_error(app)
+        self.assertEqual(app.session_state['matched_seed'], seed)
+        self.assertGreater(float(app.metric[0].value), before)
+        app.button(key='action_8_resample').click().run()
+        self.assert_no_error(app)
+        self.assertEqual(app.session_state['matched_seed'], seed+1)
 
     def test_controls_survive_navigation_without_leaking_between_chapters(self):
         app = self.app()

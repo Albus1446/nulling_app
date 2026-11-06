@@ -102,3 +102,72 @@ def sky_experiment(*, star_temperature=5778., star_radius=1., distance=10.,
                 stellar_counts=stellar_counts, planet_transfer=planet_transfer,
                 rho_mas=scene['rho_star']/nl.MAS2RAD,
                 planet_xy=(px/nl.MAS2RAD, py/nl.MAS2RAD), in_view=in_view)
+
+
+def spectral_observation(**parameters):
+    """沿用天空实验的 ±400 mas 接收场，计算一整圈、10 小时的多谱道计数。
+
+    各波长独立积分以控制内存；圆对称背景的两暗路取对称平均，
+    避免浮点积分误差被当作斩波信号。返回计数包含四孔面积与后端效率。
+    """
+    cfg = nl.default_config(instrument__D=parameters.get('diameter', 4.),
+                            array__baseline=parameters.get('baseline', 14.5))
+    inst = nl.build_instrument(cfg)
+    samp = nl.rotation_sampling(cfg, inst)
+    phi = samp['phi']
+    e3, e4, signals, fluxes = [], [], [], []
+    parts = {name: [] for name in ['恒星漏光', '本地黄道光', '外黄道光', '行星']}
+    names = {'恒星漏光': '恒星', '本地黄道光': '本地黄道光', '外黄道光': '外黄道光'}
+    for wl, dwl in zip(inst['wl'], inst['dwl']):
+        args = dict(parameters, wavelength_um=wl*1e6, rotation=0., npix=81)
+        exp = sky_experiment(**args)
+        # 天空实验采用 Δλ=λ/20；换成边界严格相接的光谱谱道。
+        factor = dwl/(wl/20) * inst['area'] * inst['eta']
+        background = 0.
+        for label, source in names.items():
+            rate = exp['output'][source][2:].sum() * factor
+            parts[label].append(rate * samp['t_int'])
+            background += rate/2
+        x, y = np.array(exp['planet_xy']) * nl.MAS2RAD
+        a, b = nl.sky_to_array(x, y, phi)
+        r = response(a, b, wl, inst['b'], inst['q'], inst['D'])
+        planet = exp['planet_flux'] * factor if exp['in_view'] else 0.
+        dt = samp['t_int']/len(phi)
+        e3.append((background + planet*r[2])*dt)
+        e4.append((background + planet*r[3])*dt)
+        signals.append(planet*(r[2]-r[3])*dt)
+        fluxes.append(planet*dt)
+        parts['行星'].append(planet*(r[2]+r[3]).mean()*samp['t_int'])
+    e3, e4, signals = map(np.array, (e3, e4, signals))
+    variance = e3+e4
+    snr = np.sqrt(np.sum(signals**2 / np.maximum(variance, 1e-30)))
+    return dict(inst=inst, samp=samp, e3=e3, e4=e4, signal=signals,
+                variance=variance, parts={k: np.array(v) for k, v in parts.items()},
+                planet_counts=np.array(fluxes), snr=float(snr),
+                true=np.array(exp['planet_xy']), in_view=exp['in_view'])
+
+
+def search_templates(observation, half_width=150., n_grid=61):
+    """多波长位置模板；保留真实谱形、衍射包络和每步积分时间。"""
+    inst, samp = observation['inst'], observation['samp']
+    tpl = nl.correlation_templates(inst, samp, wl_idx=np.where(inst['wl'] > 6e-6)[0],
+                                   step=8, grid_mas=(-half_width, half_width), n_grid=n_grid)
+    x, y = np.meshgrid(tpl['x'], tpl['y'])
+    envelope = np.array([airy_amplitude(x, y, wl, inst['D'])**2 for wl in inst['wl'][tpl['wl_idx']]])
+    tpl['tm'] *= (envelope * observation['planet_counts'][tpl['wl_idx'], None, None])[None]
+    return tpl
+
+
+def matched_filter(data, templates, variance):
+    """沿最后一维计算带方差权重的分数和非负最小二乘幅度。
+
+    score=<d,t>/sqrt(<t,t>)；每个候选模板归一化，避免高透射位置天然得高分。
+    零响应模板给出零分；方差应使用两路计数之和或背景主导近似。
+    """
+    weight = 1/np.maximum(np.asarray(variance), 1e-30)
+    norm2 = np.sum(templates**2 * weight, axis=-1)
+    cross = np.sum(templates * (data*weight), axis=-1)
+    good = norm2 > 1e-24
+    score = np.divide(cross, np.sqrt(norm2), out=np.zeros_like(cross), where=good)
+    amplitude = np.maximum(0., np.divide(cross, norm2, out=np.zeros_like(cross), where=good))
+    return score, amplitude

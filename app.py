@@ -148,30 +148,6 @@ def render_rotation():
         C.show(S.fig_rotation(phi, T3 - T4, ext, psky, (da / C.MAS, db / C.MAS), t3 - t4, np.rad2deg(phis)))
     st.caption("左：在天空中，阵列（四个圆点）绕恒星旋转。中：站在阵列上看，斩波图不动，行星沿虚线圆反向转动。右：记录下来的斩波信号，圆点是当前时刻。")
 
-    st.header("不同位置，不同指纹")
-    st.markdown("""
-    下面的两条曲线来自两个候选位置。先把方位角差和角距离差都设成 0，让它们完全重合。
-
-    **再试一次：** 只把第二颗的方位角增加 10°，其他参数不变。两条曲线还一样吗？再把角距离改大一点，比较变化。
-    第 8 节就会用这样的曲线去匹配观测数据。
-    """)
-    c1, c2 = st.columns([1, 3.2])
-    with c1:
-        dpa = st.slider("第二颗的方位角比第一颗多（度）", 0, 90, C.control_value('lesson_6_dpa', 10), 1, key='lesson_6_dpa')
-        dsep = st.slider("第二颗的角距离比第一颗多（mas）", -30, 30, C.control_value('lesson_6_dsep', 0), 1, key='lesson_6_dsep')
-    psky2 = np.array([(sep + dsep) * np.cos(np.deg2rad(pa + dpa)), (sep + dsep) * np.sin(np.deg2rad(pa + dpa))])
-    da2, db2 = nl.sky_to_array(psky2[0] * C.MAS, psky2[1] * C.MAS, phis)
-    s2 = np.subtract(*nl.transmission(da2, db2, lam * 1e-6, L, q))
-    with c2:
-        fig, ax = plt.subplots(figsize=(8.4, 2.8))
-        ax.plot(np.rad2deg(phis), t3 - t4, color=S.PLANET, lw=1.6, label=f"位置 1：{sep} mas，{pa}°")
-        ax.plot(np.rad2deg(phis), s2, color=S.RED, lw=1.2, ls="--", label=f"位置 2：{sep + dsep} mas，{pa + dpa}°")
-        ax.set_xlim(0, 360); ax.set_ylim(-1.05, 1.05); ax.axhline(0, color="0.8", lw=0.6)
-        ax.set_xlabel("阵列转过的角度（°）"); ax.set_ylabel("斩波信号"); ax.legend(loc="lower left", bbox_to_anchor=(0, 1.0), ncol=2, fontsize=8.5)
-        C.show(fig)
-    match = np.corrcoef(t3 - t4, s2)[0, 1]
-    st.markdown(f"两条曲线的相似度（相关系数，1 表示完全相同）：**{match:.2f}**")
-
     st.success("""
     **你刚刚观察到：** 在给定阵列和波长时，行星的位置会影响旋转信号的形状。比较这些形状，就能为定位提供线索。
     """)
@@ -213,29 +189,10 @@ def render_photon_noise():
     **比较一下：** 光子越多，计数起伏的绝对大小越大；但起伏占总数的比例反而越小。测量因此变得更稳定。
     """)
 
-    st.header("暗输出里的光子从哪里来")
+    st.markdown("第五节已经把光子按来源分开，并比较了行星能否找到。这里单独观察随机起伏怎样随计数和时间改变。")
     bd = C.bundle()
     bud, inst = bd["bud"], bd["inst"]
     wl = inst["wl"] * 1e6
-    k = bd["samp"]["t_int"] * inst["eta"]
-    parts = {"恒星漏光": (bud["sl3"] + bud["sl4"]) * k, "本地黄道光（太阳系内的尘埃）": (bud["lz3"] + bud["lz4"]) * k,
-             "外黄道光（目标恒星的尘埃）": (bud["ez3"] + bud["ez4"]) * k, "行星": bud["P"]}
-    fig, ax = plt.subplots(figsize=(8.4, 3.0))
-    bottom = np.zeros_like(wl)
-    tot = sum(parts.values())
-    for (name, v), col in zip(parts.items(), [S.STAR, S.GREY, S.DUST, S.PLANET]):
-        ax.bar(wl, v / tot, bottom=bottom, width=inst["dwl"] * 1e6 * 0.92, color=col, label=name)
-        bottom += v / tot
-    ax.set_xlabel("波长（微米）"); ax.set_ylabel("所占比例"); ax.set_ylim(0, 1)
-    ax.legend(loc="upper left", bbox_to_anchor=(1.0, 1.0), fontsize=8.5)
-    ax.set_title("10 秒差距外的类太阳恒星，观测 10 小时：两路暗输出里的光子来源")
-    C.show(fig)
-    st.markdown("""
-    这张图把暗输出里的光子按来源分开了。先看看短波长一侧，再看看长波长一侧：主要的背景来源一样吗？
-
-    恒星漏光和尘埃贡献了很多光子，行星只占很小一部分。斩波能减去对称背景的平均值，
-    却不能让每次计数的随机起伏也刚好抵消。背景越亮，留下的光子噪声通常就越大。
-    """)
 
     st.header("信噪比：信号比噪声大多少倍")
     st.latex(r"\mathrm{SNR} \approx \frac{N_{\mathrm{planet}}}{\sqrt{N_{\mathrm{background}}}}")
@@ -272,7 +229,7 @@ def render_photon_noise():
         ax.set_title(f"{wl[wi]:.1f} µm 处，观测 {hours:g} 小时的单个波长数据", pad=24)
         C.show(fig)
     st.markdown("""
-    单个波长的点可能仍很乱。我们还可以把多个波长、多个旋转角度的信息合起来，利用它们共同支持的信号。下一节就来试试。
+    单个波长的点可能仍很乱。我们还可以把多个波长、多个旋转角度的信息合起来，利用它们共同支持的信号。下一节用一条固定曲线练习匹配。
     """)
 
     st.success("""
@@ -282,97 +239,156 @@ def render_photon_noise():
     C.think("为什么短波长的数据几乎没用？",
             "短波长时行星本身很暗（它的温度只有约 255 K，主要在长波长发光），而恒星漏光又最多（零深 ∝ 1/λ²）。信号小、噪声大。")
 
-def render_planet_search():
-    C.goal("""
-    把观测数据和候选信号逐个比较，试着从噪声里找出行星。
-    """)
+def render_photon_sources(observation):
+    st.header("暗输出里的光子从哪里来")
+    st.markdown("现在把两路暗输出收到的光子按来源分开。下面的图使用上方当前参数，并让阵列完整旋转一圈。先看看短波长，再看看长波长：主要背景一样吗？")
+    inst = observation['inst']
+    wl = inst['wl']*1e6
+    parts = observation['parts']
+    total = sum(parts.values())
+    bottom = np.zeros_like(total)
+    fig, ax = plt.subplots(figsize=(8.4, 3.0))
+    for (name, counts), color in zip(parts.items(), [S.STAR, S.GREY, S.DUST, S.PLANET]):
+        fraction = counts/np.maximum(total, 1e-30)
+        ax.bar(wl, fraction, bottom=bottom, width=inst['dwl']*1e6*.92, color=color, label=name)
+        bottom += fraction
+    ax.set(xlabel="波长（微米）", ylabel="两路暗输出的光子比例", ylim=(0, 1),
+           title="当前目标与尘埃参数：旋转一圈后的光子来源")
+    ax.legend(loc="upper left", bbox_to_anchor=(1., 1.), fontsize=8.5)
+    C.show(fig)
+    st.markdown("**试试看：** 只把外黄道尘量增加十倍，再看看行星所占的比例和下面的信噪比。斩波能减去对称背景的平均值，背景光子的随机起伏仍然存在。")
+    st.caption("光子预算采用与上图相同的 ±400 mas 圆形接收场、圆孔衍射包络和四路合光矩阵；光谱覆盖 4–18.5 微米，分辨率约 20。所选波长与旋转角只控制上方的单幅图。")
 
-    st.markdown("""
-    现在，我们已经有了行星可能留下的信号形状，也知道实际数据会带着噪声。接下来怎样找位置？
 
-    可以借用「听歌识曲」的思路：把一段嘈杂的录音，与曲库里的候选曲目逐个比较。这里的「曲库」换成了天空中不同位置对应的信号。
-
-    对于每一个候选位置，我们先计算旋转信号，再把它与观测数据逐点比较，得到一个分数。
-    把这些分数按天空位置排成图，就是下面的**相关图**。程序把得分最高的位置作为这次的定位结果。
-
-    **试试看：** 先保留加权，点击几次「再观测一次」。圆圈标出真实位置，叉号标出找到的位置。每次都能找对吗？
-    然后把观测时间调长，再比较结果。加权的作用，是让噪声较大的波长少影响一些判断。
-    """)
-
-    if "seed8" not in st.session_state:
-        st.session_state.seed8 = 0
+def render_planet_search(observation):
+    st.header("在当前条件下，能找到行星吗？")
+    st.markdown("先看光子噪声下的预期信噪比，再试一次带噪声的定位。每个候选位置都对应一条旋转曲线；把数据与这些曲线匹配，得到一张位置得分图。这里按噪声方差加权，并归一化每个候选模板。")
+    hours = st.slider("观测时间（小时）", 1., 50., C.control_value('lesson_5_hours', 10.), 1., key='lesson_5_hours')
+    factor = hours/10
+    snr = observation['snr']*np.sqrt(factor)
+    c1, c2 = st.columns(2)
+    c1.metric("预期 SNR（全部谱道与角度）", f"{snr:.1f}")
+    c2.metric("达到参考 SNR = 5 需要", f"{10*(5/observation['snr'])**2:.1f} 小时" if observation['snr'] > 0 else "当前接收场内无行星信号")
+    st.caption("SNR² = Σ s² / (μ₃ + μ₄)，对谱道与旋转角度求和。SNR = 5 仅作教学参考，未校准搜索多个位置的虚警率；不等同于已确认探测。只考虑光子噪声，未加入仪器系统误差。")
+    if not observation['in_view']:
+        st.info("行星在 ±400 mas 接收场外；请先调整系统距离或投影分离距离，再进行定位。")
+        return
+    if 'seed5' not in st.session_state:
+        st.session_state.seed5 = 0
+    if st.button("再观测一次（换一组随机噪声）", key='action_5_resample'):
+        st.session_state.seed5 += 1
+    inst = observation['inst']
+    true = observation['true']
+    half_width = min(400., max(150., np.hypot(*true)*1.25))
+    tpl = C.search_library(inst['b'], inst['D'], half_width, tuple(observation['planet_counts']))
+    wi, pi = tpl['wl_idx'], tpl['phi_idx']
+    # 每个候选位置一条扁平的多波长旋转模板。
+    templates = tpl['tm'].transpose(2, 3, 1, 0).reshape(len(tpl['y']), len(tpl['x']), -1)*factor
+    e3, e4 = observation['e3']*factor, observation['e4']*factor
+    variance = (e3+e4)[wi][:, pi].ravel()
+    def locate(data):
+        scores, _ = O.matched_filter(data[wi][:, pi].ravel(), templates, variance)
+        iy, ix = np.unravel_index(np.argmax(scores), scores.shape)
+        found = np.array([tpl['x'][ix], tpl['y'][iy]])/C.MAS
+        return scores, found
+    data = nl.simulate_chop(e3, e4, np.random.default_rng(st.session_state.seed5))
+    scores, found = locate(data)
+    error = np.hypot(*(found-true))
     c1, c2 = st.columns([1, 2.6])
-    with c1:
-        hours = st.slider("观测时间（小时）", 1.0, 40.0, C.control_value('lesson_8_h7', 10.0), 1.0, key='lesson_8_h7')
-        weighted = st.toggle("按噪声大小给各波长加权", value=C.control_value('lesson_8_weighted', True), key='lesson_8_weighted')
-        if st.button("再观测一次（换一组随机噪声）", key='action_8_resample'):
-            st.session_state.seed8 += 1
-    bd = C.bundle()
-    tpl = C.templates()
-    f = hours / 10
-    e3, e4 = bd["e3"] * f, bd["e4"] * f
-    rng = np.random.default_rng(st.session_state.seed8)
-    data = nl.simulate_chop(e3, e4, rng)
-    w = 1.0 / (e3 + e4).mean(axis=1) if weighted else None
-    cm = nl.correlation_map(tpl, data, w)
-    _, found = nl.locate(tpl, cm)
-    true = bd["true"]
-    err = float(np.hypot(*(found - true)))
-    snr = bd["bud"]["snr_total"] * np.sqrt(f)
-    with c1:
-        st.metric("SNR", f"{snr:.1f}")
-        st.metric("定位误差", f"{err:.1f} mas", delta="找对了" if err < 10 else "找错了",
-                  delta_color="normal" if err < 10 else "inverse")
+    c1.metric("本次定位误差", f"{error:.1f} mas")
+    c1.metric("最高匹配得分", f"{scores.max():.1f}")
     with c2:
-        fig, ax = plt.subplots(figsize=(5.6, 4.6))
-        hw = 150
-        im = ax.imshow(cm / np.abs(cm).max(), extent=[-hw, hw, -hw, hw], cmap=S.SIGNED_CMAP, vmin=-1, vmax=1)
-        ax.plot(0, 0, "*", color=S.STAR, ms=14, mec="k", mew=0.5)
-        ax.plot(*true, "o", ms=13, mfc="none", mec="k", mew=1.5, label="真实位置")
-        ax.plot(*found, "x", ms=11, color="k", mew=2, label="找到的位置（最高分）")
-        ax.set_xlabel("mas"); ax.set_ylabel("mas"); ax.legend(loc="lower left", fontsize=8.5)
-        ax.set_title("相关图：每一点的颜色 = 该位置的相似度")
-        fig.colorbar(im, ax=ax, shrink=0.8)
+        fig, ax = plt.subplots(figsize=(5.8, 4.2))
+        im = ax.imshow(scores, origin='lower', extent=[-half_width, half_width]*2, cmap=S.SIGNED_CMAP,
+                       vmin=-max(abs(scores).max(), 1.), vmax=max(abs(scores).max(), 1.))
+        ax.plot(0, 0, '*', color=S.STAR, ms=12)
+        ax.plot(*true, 'o', mfc='none', mec="#141521", ms=12, label='真实位置')
+        ax.plot(*found, 'x', color="#141521", ms=9, label='得分最高的位置')
+        ax.set(xlabel='α（mas）', ylabel='β（mas）', title='候选位置的归一化匹配得分')
+        ax.legend(loc='lower left', fontsize=8)
+        fig.colorbar(im, ax=ax, shrink=.8, label='匹配得分')
         C.show(fig)
-
-    st.markdown("""
-    **看一看：** 深蓝色代表较高的正分数，棕色代表负分数。真实位置附近通常有一个峰，中心对称的位置则有一个负的影子。
-
-    附近还会出现别的峰，叫做**旁瓣**。噪声有时会把旁瓣抬高，使它超过真实位置的峰。
-    所以，得分最高的位置是一次估计，还需要用更多数据来检查。
-    """)
-
-    st.header("多观测几次，统计一下")
-    st.markdown("""
-    一次观测可能刚好幸运，也可能刚好碰到很大的噪声。
-
-    **再试一次：** 点击下面的按钮，在相同条件下生成 100 组独立噪声。我们暂把定位误差小于 10 mas 记作「找对」。
-    记录找对的次数，再换一个观测时间重复一次。哪种方案更可靠？
-    """)
-    if st.button("开始 100 次模拟", key='action_8_simulate'):
+    st.markdown("**看一看：** 真实位置附近可能出现峰，也可能有别的峰被噪声抬高。提高 SNR 通常能让定位更稳定；只看一次最高分，还不能保证找对。")
+    st.subheader("多观测几次，统计一下")
+    st.markdown("保持当前目标、尘埃和仪器参数，生成 100 组独立噪声。暂把误差小于 10 mas 记作「找对」，再改变观测时间比较结果。")
+    if st.button("开始 100 次模拟", key='action_5_simulate'):
         rng = np.random.default_rng(100)
-        errs = np.array([np.hypot(*(nl.locate(tpl, nl.correlation_map(tpl, nl.simulate_chop(e3, e4, rng), w))[1] - true))
-                         for _ in range(100)])
-        ok = errs < 10
-        c1, c2 = st.columns([1, 2.4])
-        c1.metric("找对的次数（误差 < 10 mas）", f"{ok.sum()} / 100")
-        if ok.any():
-            c1.metric("找对时的典型误差", f"{np.median(errs[ok]):.1f} mas")
-        with c2:
-            fig, ax = plt.subplots(figsize=(6.4, 2.6))
-            ax.hist(np.clip(errs, 0, 60), bins=30, color=S.GREY)
-            ax.axvline(10, color=S.RED, ls="--", lw=1)
-            ax.set_xlabel("误差（mas，超过 60 的计入最右一格）"); ax.set_ylabel("次数")
-            C.show(fig)
-        st.caption("试试：把观测时间调到 3 小时或 30 小时，或者关掉加权，再跑一次。")
+        errors = np.array([np.hypot(*(locate(nl.simulate_chop(e3, e4, rng))[1]-true)) for _ in range(100)])
+        st.metric("找对的次数（误差 < 10 mas）", f"{(errors < 10).sum()} / 100")
+        fig, ax = plt.subplots(figsize=(7., 2.5))
+        ax.hist(np.minimum(errors, 60), bins=30, color=S.GREY)
+        ax.axvline(10, color=S.DUST, ls='--')
+        ax.set(xlabel='定位误差（mas；≥60 计入最右一格）', ylabel='次数')
+        C.show(fig)
+    st.caption("为保持交互速度，定位使用 >6 微米的谱道、每 8° 一个采样和 61×61 位置网格；上面的预期 SNR 使用全部谱道与每 1° 采样。网格会限制定位精度。100 次结果只用于比较当前方案。")
 
-    st.success("""
-    **这次实验告诉我们：** 相关图利用信号形状来寻找位置。提高 SNR 通常能让结果更稳定，但定位误差还受阵列、波长和重建方法影响。100 次模拟可以帮助你比较方案，不能当作所有观测的保证。
+
+def render_matched_filter():
+    C.goal("拖动假设的星—行星距离，让模板曲线与一组固定的模拟斩波观测尽量吻合。")
+    st.markdown("""
+    想象你收到一条随阵列旋转而起伏的斩波曲线。恒星在哪里已知，行星在哪儿还不知道。
+    先固定方位角、基线和波长，只猜**行星离恒星多远**。每猜一个距离，合光矩阵就给出一条模板曲线。
+
+    **试试看：** 慢慢拖动距离，先对齐峰谷出现的角度，再比较起伏的形状。什么时候残差最小、匹配得分最高？
+    这就是 **匹配滤波（matched filter）** 的基本想法：让数据里符合预期形状的部分累积起来。
     """)
-    C.think("为什么关掉加权后经常找错？",
-            "短波长的数据噪声最大、行星信号又最弱。不加权时，这些噪声和长波长的有用信号同等对待，把相关图搅乱了。")
-    C.think("找到位置以后，还能得到什么？",
-            "在找到的位置上，逐个波长比较数据和指纹的幅度，就能得到行星在每个波长的亮度——也就是行星的**光谱**，可以用来研究它的温度和大气。")
+    if 'matched_seed' not in st.session_state:
+        st.session_state.matched_seed = 12
+    c1, c2 = st.columns([1, 2.8])
+    with c1:
+        separation = st.slider("假设的星—行星角距离（mas）", 20., 180., C.control_value('lesson_8_separation', 70.), 1., key='lesson_8_separation')
+        noise = st.slider("观测噪声（每点标准差）", .02, .30, C.control_value('lesson_8_noise', .08), .01, key='lesson_8_noise')
+        st.caption(f"系统在 10 pc 时，相当于投影分离距离 {separation/100:.2f} au。固定方位角 40°、基线 14.5 m、口径 4 m、波长 10 µm。")
+        if st.button("重新生成模拟观测", key='action_8_resample'):
+            st.session_state.matched_seed += 1
+    angles = np.arange(0, 360, 3)
+    phi = np.deg2rad(angles)
+    def template(sep, rotation_angles=phi):
+        x, y = sep*C.MAS*np.cos(np.deg2rad(40)), sep*C.MAS*np.sin(np.deg2rad(40))
+        a, b = nl.sky_to_array(x, y, rotation_angles)
+        r = O.response(a, b, 10e-6, 14.5, diameter=4.)
+        return r[2]-r[3]
+    truth = template(115.)
+    data = truth + np.random.default_rng(st.session_state.matched_seed).normal(0, noise, len(phi))
+    model = template(separation)
+    score, amplitude = O.matched_filter(data, model, noise**2)
+    fitted = amplitude*model
+    residual = data-fitted
+    with c2:
+        fig, axes = plt.subplots(2, 1, figsize=(8.6, 5.0), sharex=True, gridspec_kw={'height_ratios':[2, 1]})
+        axes[0].errorbar(angles, data, yerr=noise, fmt='.', ms=3, elinewidth=.5, alpha=.55, color=S.GREY, label='假设观测到的斩波信号')
+        smooth_angles = np.linspace(0, 360, 1441)
+        axes[0].plot(smooth_angles, amplitude*template(separation, np.deg2rad(smooth_angles)), color=S.PLANET,
+                     lw=1.7, label=f'距离 {separation:g} mas 的最佳幅度模板')
+        axes[0].set_ylabel('斩波信号（相对单位）')
+        axes[0].legend(loc='lower left', bbox_to_anchor=(0, 1.), fontsize=8.5)
+        axes[1].plot(angles, residual, '.', color="#141521", ms=3)
+        axes[1].axhspan(-noise, noise, color=S.BRIGHT, alpha=.2)
+        axes[1].axhline(0, color=S.DUST, lw=.7)
+        axes[1].set(xlabel='阵列旋转角（°）', ylabel='观测 − 模板', xlim=(0, 360))
+        C.show(fig)
+    c1, c2, c3 = st.columns(3)
+    c1.metric("当前距离的匹配得分", f"{score:.2f}")
+    c2.metric("拟合的非负信号幅度", f"{amplitude:.2f}")
+    c3.metric("残差 RMS / 噪声标准差", f"{np.sqrt(np.mean(residual**2))/noise:.2f}")
+    st.markdown("幅度会自动拟合，让你专注比较曲线形状。残差 RMS 接近噪声标准差时，两者的比值约为 1；把曲线错位，残差里通常会出现有规律的起伏。")
+    st.latex(r"Q(\theta)=\frac{\sum_i d_i t_i(\theta)/\sigma_i^2}{\sqrt{\sum_i t_i^2(\theta)/\sigma_i^2}},\qquad \hat a=\max\!\left(0,\frac{\sum_i d_i t_i/\sigma_i^2}{\sum_i t_i^2/\sigma_i^2}\right)")
+    st.markdown("d 是观测、t 是假设距离对应的模板、σ 是噪声标准差。分母把模板的强弱归一化，避免只因模板振幅大就得高分。这里假设各采样噪声独立，采用高计数时的高斯近似。")
+    with st.expander("完成手动匹配后，查看整条距离得分曲线"):
+        distances = np.arange(20., 181.)
+        scores, _ = O.matched_filter(data, np.array([template(sep) for sep in distances]), noise**2)
+        best = distances[np.argmax(scores)]
+        fig, ax = plt.subplots(figsize=(8.4, 2.6))
+        ax.plot(distances, scores, color=S.PLANET)
+        ax.axvline(separation, color="#141521", ls='--', label='当前假设')
+        ax.axvline(115., color=S.DUST, ls=':', label='生成数据的真实距离')
+        ax.set(xlabel='假设的星—行星角距离（mas）', ylabel='匹配得分')
+        ax.legend(fontsize=8)
+        C.show(fig)
+        st.markdown(f"这组数据的最高分在 **{best:.0f} mas**；生成数据时用的是 **115 mas（1.15 au）**。噪声会让最佳估计偏离真实值，旁瓣也可能产生其他峰。")
+    C.think("为什么只调距离，不够完成真实的行星搜索？", "这里预先固定了方位角，只搜索一维距离。第五节会同时扫描两个天空坐标，并把多个波长一起纳入匹配。真实探测还要评估虚警率和模型误差。")
+    st.caption("方法背景：[LIFE II：信号模拟与提取](https://arxiv.org/abs/2203.00471)。此处为固定方位角、单波长的教学简化。")
+
 
 def render_contrast():
     C.goal("比较恒星和行星的亮度，再看看衍射光斑怎样影响分辨。")
@@ -501,10 +517,10 @@ def render_sky_lab():
         with c2:
             baseline = st.slider("基线（米）", 4., 40., C.control_value('lesson_5_b', 14.5), .5, key='lesson_5_b')
             rotation = st.slider("阵列旋转角（度）", 0., 180., C.control_value('lesson_5_rotation', 0.), 5., key='lesson_5_rotation')
-    experiment = O.sky_experiment(star_temperature=ts, star_radius=rs, distance=distance,
+    parameters = dict(star_temperature=ts, star_radius=rs, distance=distance,
         planet_temperature=tp, planet_radius=rp, orbit_au=orbit, position_angle=pa,
-        exozodi=ez, local_zodi=lz, latitude=latitude, wavelength_um=wl,
-        baseline=baseline, diameter=diameter, rotation=rotation)
+        exozodi=ez, local_zodi=lz, latitude=latitude, baseline=baseline, diameter=diameter)
+    experiment = O.sky_experiment(**parameters, wavelength_um=wl, rotation=rotation)
     component = st.radio("查看哪些光源", ['全部光源', '恒星', '行星', '本地黄道光', '外黄道光'],
         index=['全部光源', '恒星', '行星', '本地黄道光', '外黄道光'].index(C.control_value('lesson_5_component', '全部光源')),
         key='lesson_5_component', horizontal=True)
@@ -533,16 +549,20 @@ def render_sky_lab():
     正负尘埃贡献是在对整个对称分布积分后抵消，单个像素仍可能非零。平均值抵消也不会消除光子噪声。
     这里采用黑体恒星/行星和正面朝向的轴对称尘埃盘。恒星光度会同时影响尘埃温度；温度、半径与行星位置可独立调节，用来分辨各因素的作用。
     """)
+    observation = C.observation(**parameters)
+    render_photon_sources(observation)
+    render_planet_search(observation)
+
 
 SECTIONS = {
     1: ("光的干涉", "先叠加两列波", render_interference),
     2: ("对比度", "再比较恒星和行星有多亮", render_contrast),
     3: ("消零深度", "看看恒星光被压低了多少", render_null_depth),
     4: ("四集光器合光矩阵", "把干涉与衍射放在同一个响应里", render_combiner),
-    5: ("恒星、行星与黄道尘", "用滑动条比较天空贡献图", render_sky_lab),
+    5: ("恒星、行星与黄道尘", "从天空贡献、光子来源到行星可探测性", render_sky_lab),
     6: ("进阶：旋转阵列", "从空间位置到信号形状", render_rotation),
     7: ("进阶：光子噪声", "背景平均值抵消后，噪声还在", render_photon_noise),
-    8: ("进阶：找到行星", "比较候选信号，估计位置", render_planet_search),
+    8: ("匹配滤波 matched filter", "调节星—行星距离，匹配斩波观测", render_matched_filter),
 }
 
 

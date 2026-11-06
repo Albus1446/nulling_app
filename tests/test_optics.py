@@ -6,6 +6,25 @@ import optics as O
 
 
 class OpticsTests(unittest.TestCase):
+    def test_matched_filter_normalizes_templates_and_fits_amplitude(self):
+        data = np.array([1., -2., 3., -2.])
+        templates = np.array([data, 10*data, -data, np.zeros_like(data)])
+        score, amplitude = O.matched_filter(data, templates, np.ones(4))
+        self.assertAlmostEqual(score[0], score[1])
+        np.testing.assert_allclose(amplitude, [1., .1, 0., 0.])
+        self.assertEqual(score[3], 0.)
+
+    def test_spectral_budget_conserves_counts_and_uses_target_parameters(self):
+        base = O.spectral_observation()
+        np.testing.assert_allclose(base['e3']-base['e4'], base['signal'], atol=1e-8)
+        np.testing.assert_allclose((base['e3']+base['e4']).sum(axis=1), sum(base['parts'].values()))
+        self.assertGreater(base['snr'], 0.)
+        larger = O.spectral_observation(planet_radius=2., exozodi=0., local_zodi=0.)
+        np.testing.assert_allclose(larger['signal'], 4*base['signal'])
+        np.testing.assert_allclose(larger['parts']['恒星漏光'], base['parts']['恒星漏光'])
+        self.assertEqual(larger['parts']['外黄道光'].sum(), 0.)
+        self.assertEqual(larger['parts']['本地黄道光'].sum(), 0.)
+
     def test_matrix_conserves_energy_and_matches_reference_dark_outputs(self):
         np.testing.assert_allclose(O.COMBINER @ O.COMBINER.conj().T, np.eye(4), atol=1e-15)
         x, y = np.meshgrid(np.linspace(-200, 200, 31)*nl.MAS2RAD, np.linspace(-200, 200, 31)*nl.MAS2RAD)

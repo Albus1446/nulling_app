@@ -6,6 +6,7 @@ from io import BytesIO
 
 import core as nl
 import schematics as S
+import optics as O
 
 MAS = S.MAS
 
@@ -53,6 +54,18 @@ def save_controls(section):
     prefix = f"lesson_{section}_"
     values.update({key: value for key, value in st.session_state.items() if key.startswith(prefix)})
     st.session_state["_lesson_values"] = values
+
+
+@st.cache_data(show_spinner="正在计算各光源的光谱与旋转信号……", max_entries=4)
+def observation(**parameters):
+    return O.spectral_observation(**parameters)
+
+
+@st.cache_data(show_spinner="正在准备候选位置的匹配模板……", max_entries=2)
+def search_library(baseline, diameter, half_width, planet_counts):
+    inst = nl.build_instrument(nl.default_config(instrument__D=diameter, array__baseline=baseline))
+    samp = nl.rotation_sampling(nl.default_config(), inst)
+    return O.search_templates(dict(inst=inst, samp=samp, planet_counts=np.array(planet_counts)), half_width)
 
 
 STAR_TYPES = {
