@@ -1,4 +1,4 @@
-"""各页面共用的工具：页面设置、带缓存的计算、显示图片。"""
+"""讲义共用的工具：页面设置、章节状态、带缓存的计算、显示图片。"""
 import numpy as np
 import matplotlib.pyplot as plt
 import streamlit as st
@@ -28,12 +28,26 @@ def show(fig):
 
 
 def goal(text):
-    st.info("**这一页你会学到：** " + text)
+    st.info("**这一节你会学到：** " + text)
 
 
 def think(question, answer):
     with st.expander("想一想：" + question):
         st.markdown(answer)
+
+
+def control_value(key, default):
+    """以保存的值初始化重新出现的控件，避免同时赋默认值和控件状态。"""
+    saved = st.session_state.get("_lesson_values", {})
+    return st.session_state.get(key, saved.get(key, default))
+
+
+def save_controls(section):
+    """用不绑定控件的状态保存参数；按钮是一次动作，不保存。"""
+    values = dict(st.session_state.get("_lesson_values", {}))
+    prefix = f"lesson_{section}_"
+    values.update({key: value for key, value in st.session_state.items() if key.startswith(prefix)})
+    st.session_state["_lesson_values"] = values
 
 
 STAR_TYPES = {
