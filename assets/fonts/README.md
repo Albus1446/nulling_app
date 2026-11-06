@@ -1,8 +1,7 @@
-# Noto Sans SC
+# Noto Serif CJK SC
 
-- 文件：`NotoSansSC-Regular.otf`
-- 来源：[Noto CJK 官方仓库](https://github.com/notofonts/noto-cjk/tree/main/Sans/SubsetOTF/SC)
-- 下载地址：`https://raw.githubusercontent.com/notofonts/noto-cjk/main/Sans/SubsetOTF/SC/NotoSansSC-Regular.otf`
-- 授权：SIL Open Font License 1.1，详见同目录 `OFL.txt`。
-
-字体随应用一起分发，仅在服务端绘图时读取；无需网络字体服务。
+- 原始字体：`NotoSerifCJKsc-Regular.otf`，用于 Matplotlib 图件。
+- 来源：[Noto CJK 官方仓库](https://github.com/notofonts/noto-cjk/tree/main/Serif/OTF/SimplifiedChinese)。
+- 授权：SIL Open Font License 1.1，见 `OFL-Serif.txt`。
+- 页面使用 `static/fonts/noto-serif-cjk-sc.woff2`，由同一字体按讲义所需字形生成的网页子集。
+- 字体均随项目分发，不依赖外部字体网站。

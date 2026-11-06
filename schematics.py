@@ -23,7 +23,7 @@ RED = DEEP_BLUE  # 保留现有调用名称；第二条曲线使用深蓝色。
 SIGNED_CMAP = LinearSegmentedColormap.from_list("nulling_signed", [WARM, "#FFFFFF", DEEP_BLUE])
 
 # 字体随项目分发，云端绘图无需系统字体或运行时下载。
-FONT_PATH = Path(__file__).resolve().parent / "assets/fonts/NotoSansSC-Regular.otf"
+FONT_PATH = Path(__file__).resolve().parent / "assets/fonts/NotoSerifCJKsc-Regular.otf"
 font_manager.fontManager.addfont(str(FONT_PATH))
 FONT_FAMILY = font_manager.FontProperties(fname=str(FONT_PATH)).get_name()
 
@@ -32,8 +32,8 @@ MAS = np.pi / 180 / 3600 / 1000
 
 def style():
     plt.rcParams.update({
-        "font.family": "sans-serif",
-        "font.sans-serif": [FONT_FAMILY, "DejaVu Sans"],
+        "font.family": "serif",
+        "font.serif": [FONT_FAMILY, "DejaVu Serif"],
         "text.color": NAVY, "axes.labelcolor": NAVY, "axes.edgecolor": NAVY,
         "xtick.color": NAVY, "ytick.color": NAVY,
         "axes.unicode_minus": False, "font.size": 10, "axes.titlesize": 11, "axes.labelsize": 10,
@@ -126,9 +126,9 @@ def fig_single_telescope_blur(D=4.0, lam_um=10.0, sep_mas=100.0, contrast=1e-7):
     planet = contrast * airy(x - sep_mas)
     fig, ax = plt.subplots(figsize=(7.2, 3.2))
     ax.semilogy(x, star, color=STAR, lw=2, label="恒星的像")
-    ax.semilogy(x, planet, color=PLANET, lw=2, label="行星的像（暗 1000 万倍）")
+    ax.semilogy(x, planet, color=PLANET, lw=2, label=f"行星的像（恒星的 {contrast:.1e}）")
     ax.axvline(sep_mas, color=PLANET, ls=":", lw=1)
-    ax.set_ylim(1e-10, 2); ax.set_xlim(x[0], x[-1])
+    ax.set_ylim(min(1e-10, contrast/30), 2); ax.set_xlim(x[0], x[-1])
     ax.set_xlabel("离恒星的角距离 (mas)"); ax.set_ylabel("亮度（相对恒星中心）")
     ax.set_title(f"口径 {D:g} m 的望远镜在 {lam_um:g} µm 的像：衍射光斑宽约 λ/D = {lam / D / MAS:.0f} mas")
     ax.legend(loc="lower center")
@@ -349,4 +349,76 @@ def fig_rotation(phi_deg, chop_map, ext_mas, planet_sky, track_xy, signal, phi_g
     ax.set_xlabel("阵列转过的角度 (°)"); ax.set_ylabel("行星的斩波信号")
     ax.set_xlim(0, 360); ax.set_ylim(-1.05, 1.05)
     ax.set_title("记录下来的信号：行星的\"指纹\"", fontsize=10)
+    return fig
+
+
+def fig_null_depth(amplitude_ratio, phase_error_deg):
+    phase = np.linspace(-180, 180, 721)
+    a = amplitude_ratio
+    dark = (1 + a*a - 2*a*np.cos(np.deg2rad(phase))) / (2*(1+a*a))
+    current = (1 + a*a - 2*a*np.cos(np.deg2rad(phase_error_deg))) / (2*(1+a*a))
+    fig, ax = plt.subplots(figsize=(7.8, 3.1), constrained_layout=True)
+    ax.plot(phase, dark, color=DEEP_BLUE)
+    ax.plot(phase_error_deg, current, 'o', color=ACCENT_BLUE, ms=8, label='当前残余相位误差')
+    ax.set_xlabel('相对理想相消条件的相位误差（度）')
+    ax.set_ylabel('暗输出 / 入射总强度')
+    ax.set_ylim(-.025, 1.05); ax.legend()
+    ax.set_title('两束光的振幅不等时，曲线的最低点也会抬高')
+    return fig
+
+
+def fig_optical_response(grid_mas, envelope, fringe, total):
+    fig, axes = plt.subplots(1, 3, figsize=(11, 3.5), constrained_layout=True)
+    extent = [grid_mas[0], grid_mas[-1], grid_mas[0], grid_mas[-1]]
+    for ax, values, title in zip(axes, [envelope, fringe, total],
+                               ['单集光器衍射包络 A', '阵列干涉条纹 T3', '共同响应 R3 = A × T3']):
+        im = ax.imshow(values, extent=extent, origin='lower', cmap='Blues', vmin=0, vmax=1)
+        ax.set_title(title); ax.set_xlabel('天空角度（mas）')
+        ax.plot(0, 0, '+', color=WARM, ms=6)
+    axes[0].set_ylabel('天空角度（mas）')
+    fig.colorbar(im, ax=axes, shrink=.8, label='相对入射总功率的比例')
+    return fig
+
+
+def fig_phasors(vectors):
+    vectors = np.asarray(vectors)
+    nodes = np.r_[0j, np.cumsum(vectors)]
+    fig, ax = plt.subplots(figsize=(5.0, 3.4), constrained_layout=True)
+    for i in range(4):
+        ax.annotate('', xy=(nodes[i+1].real, nodes[i+1].imag), xytext=(nodes[i].real, nodes[i].imag),
+                    arrowprops=dict(arrowstyle='->', color=DEEP_BLUE, lw=1.6))
+        midpoint = (nodes[i]+nodes[i+1])/2
+        normal = 1j*vectors[i]/max(abs(vectors[i]), 1e-12)
+        label = midpoint + .10*normal
+        ax.text(label.real, label.imag, str(i+1), fontsize=9, color=WARM, ha='center', va='center')
+    ax.plot([0, nodes[-1].real], [0, nodes[-1].imag], color=ACCENT_BLUE, lw=3, label='合成复振幅')
+    ax.scatter([0], [0], color=NAVY, s=14)
+    ax.set_xlim(-1.2, 1.2); ax.set_ylim(-1.2, 1.2)
+    ax.set_aspect('equal', adjustable='box')
+    ax.set_xlabel('实部'); ax.set_ylabel('虚部'); ax.legend(fontsize=8)
+    ax.set_title('输出 3：四个带权相量首尾相接')
+    return fig
+
+
+def fig_sky_contributions(experiment, component='全部光源'):
+    from matplotlib.colors import LogNorm, SymLogNorm
+    names = list(experiment['sky']) if component == '全部光源' else [component]
+    before = sum(experiment['sky'][name] for name in names) / experiment['reference_flux']
+    after = sum(experiment['output'][name] for name in names) / experiment['reference_flux']
+    fig, axes = plt.subplots(1, 3, figsize=(11.4, 3.8), constrained_layout=True)
+    h = experiment['half_width']; extent = [-h, h, -h, h]
+    positive_norm = LogNorm(vmin=1e-6, vmax=1e7)
+    for ax, values, title in zip(axes[:2], [before, after[2]], ['入射天空亮度（像素通量）', '暗输出 3 的天空贡献']):
+        im = ax.imshow(np.maximum(values, 1e-8), extent=extent, origin='lower', cmap='Blues', norm=positive_norm)
+        ax.set_title(title)
+    fig.colorbar(im, ax=list(axes[:2]), shrink=.75, label='相对于固定参考类地行星的通量')
+    signed = axes[2].imshow(after[2]-after[3], extent=extent, origin='lower', cmap=SIGNED_CMAP,
+                            norm=SymLogNorm(linthresh=1e-5, vmin=-100, vmax=100))
+    axes[2].set_title('斩波 3 − 4 的天空贡献')
+    fig.colorbar(signed, ax=axes[2], shrink=.75, label='带符号的相对通量')
+    for ax in axes:
+        ax.set_xlabel('天空角度（mas）')
+        if experiment['in_view']:
+            ax.plot(*experiment['planet_xy'], 'o', mfc='none', mec=WARM, mew=1, ms=9)
+    axes[0].set_ylabel('天空角度（mas）')
     return fig

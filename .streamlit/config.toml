@@ -4,7 +4,18 @@ primaryColor = "#4EA4EF"
 backgroundColor = "#FFFFFF"
 secondaryBackgroundColor = "#DAE2ED"
 textColor = "#141521"
-font = "sans serif"
+font = "Noto Serif CJK SC, serif"
+headingFont = "Noto Serif CJK SC, serif"
+headingFontSizes = ["2.3rem", "1.8rem", "1.4rem"]
+
+[[theme.fontFaces]]
+family = "Noto Serif CJK SC"
+url = "app/static/fonts/noto-serif-cjk-sc.woff2"
+weight = "400"
+style = "normal"
+
+[server]
+enableStaticServing = true
 
 [browser]
 gatherUsageStats = false

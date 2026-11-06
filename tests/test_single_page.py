@@ -19,28 +19,29 @@ class SinglePageTests(unittest.TestCase):
         self.assertEqual([warning.value for warning in app.warning], [])
 
     def select(self, app, section):
-        app.radio(key="selected_section").set_value(section).run()
+        app.radio(key="curriculum_section").set_value(section).run()
         self.assert_no_error(app)
         self.assertTrue(any(header.value.startswith(f"{section}:") for header in app.header))
 
     def test_all_sections_and_simulation_actions(self):
         app = self.app()
-        self.assertEqual(len(app.radio(key="selected_section").options), 9)
+        self.assertEqual(len(app.radio(key="curriculum_section").options), 8)
         for section in range(1, 9):
             with self.subTest(section=section):
                 self.select(app, section)
 
-        self.select(app, 4)
-        app.toggle(key="lesson_4_ring").set_value(False).run()
+        self.select(app, 5)
+        app.slider(key="lesson_5_rp").set_value(2.0).run()
         self.assert_no_error(app)
-        self.assertTrue(app.slider(key="lesson_4_ring_r").disabled)
+        app.radio(key="lesson_5_component").set_value("行星").run()
+        self.assert_no_error(app)
 
-        self.select(app, 7)
-        seed = app.session_state["seed7"]
-        app.button(key="action_7_resample").click().run()
+        self.select(app, 8)
+        seed = app.session_state["seed8"]
+        app.button(key="action_8_resample").click().run()
         self.assert_no_error(app)
-        self.assertEqual(app.session_state["seed7"], seed + 1)
-        app.button(key="action_7_simulate").click().run()
+        self.assertEqual(app.session_state["seed8"], seed + 1)
+        app.button(key="action_8_simulate").click().run()
         self.assert_no_error(app)
         self.assertTrue(any("/ 100" in metric.value for metric in app.metric))
 
@@ -51,7 +52,7 @@ class SinglePageTests(unittest.TestCase):
         self.assert_no_error(app)
 
         self.select(app, 2)
-        app.slider(key="lesson_2_b").set_value(20.0).run()
+        app.slider(key="lesson_2_D").set_value(20.0).run()
         self.assert_no_error(app)
         self.select(app, 3)
         self.assertEqual(app.slider(key="lesson_3_b3").value, 14.5)
@@ -62,13 +63,13 @@ class SinglePageTests(unittest.TestCase):
         self.assertEqual(app.slider(key="lesson_1_dphi").value, 180)
         self.assertTrue(any("相位差 **180°**" in text.value for text in app.markdown))
         self.select(app, 2)
-        self.assertEqual(app.slider(key="lesson_2_b").value, 20.0)
+        self.assertEqual(app.slider(key="lesson_2_D").value, 20.0)
         self.select(app, 3)
         self.assertEqual(app.slider(key="lesson_3_b3").value, 8.0)
 
     def test_original_entry_opens_the_same_single_page_app(self):
         app = self.app("首页.py")
-        self.assertEqual(len(app.radio(key="selected_section").options), 9)
+        self.assertEqual(len(app.radio(key="curriculum_section").options), 8)
         self.select(app, 1)
         self.assertEqual(app.slider(key="lesson_1_dphi").value, 150)
 

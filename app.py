@@ -1,68 +1,13 @@
-"""单页互动讲义：选择章节，只渲染当前章节。"""
+"""单页讲义：三个基础概念 → 合光矩阵 → 目标与尘埃实验。"""
 import matplotlib
 matplotlib.use("Agg")
-
 import matplotlib.pyplot as plt
 import numpy as np
 import streamlit as st
-
 import app_common as C
 import core as nl
+import optics as O
 import schematics as S
-
-
-def render_introduction():
-    st.markdown("""
-    这次，我们来做一件看起来很难的事：从耀眼的恒星旁边，找出一颗像地球一样暗淡的行星。
-
-    先别急着看公式。我们会先试一试普通望远镜，再用光的干涉压低恒星光，最后从带噪声的数据中找出行星的位置。
-    你可以边读边调参数。每次先猜一猜图会怎样变，再动手验证。
-    """)
-
-    st.header("难在哪里：在灯塔旁边找一只萤火虫")
-    C.show(S.fig_contrast_cartoon())
-    st.markdown("""
-    想象一下：远处有一座灯塔，旁边飞着一只萤火虫。我们要看清的，就是那只萤火虫。
-
-    在这里，灯塔是恒星，萤火虫是行星。以 10 微米的红外光为例，类地行星大约比类太阳恒星暗 **1000 万倍**。
-    把它们放到 10 秒差距外，两者在天空上只隔着 **0.1 角秒**。也就是说，我们既要分开两个很近的光点，又要看见其中很暗的那个。
-    """)
-
-    st.subheader("动手试试：单台望远镜能分开它们吗？")
-    c1, c2 = st.columns([1, 3])
-    with c1:
-        D = st.slider("望远镜口径 D（米）", 1.0, 40.0, C.control_value('lesson_0_D', 4.0), 0.5, key='lesson_0_D')
-        lam = st.slider("观测波长（微米）", 4.0, 18.0, C.control_value('lesson_0_lam', 10.0), 0.5, key='lesson_0_lam')
-        st.markdown(f"衍射光斑的大小约为 **λ/D ≈ {lam * 1e-6 / D / C.MAS:.0f} mas**，而行星离恒星只有 **100 mas**。")
-    with c2:
-        C.show(S.fig_single_telescope_blur(D=D, lam_um=lam))
-    st.markdown("""
-    **看一看：** 恒星和行星原本都是很小的光点，经过望远镜后却各自变成了有宽度的光斑。这是光的**衍射**造成的。
-
-    **试试看：** 先把口径从 4 米调到 40 米，保持波长不变。光斑变窄了吗？再找一找 100 mas 处的行星曲线：它有没有高过恒星光斑的尾部？
-    这里的两条曲线画的是各自的亮度；在真实图像里，我们收到的是它们叠加后的光。
-    """)
-    C.think("把口径调到 40 米，行星的像能露出来吗？",
-            "不能。口径变大，光斑变窄，100 mas 处恒星的光确实暗了很多，但仍然比行星亮几千到几万倍。"
-            "单靠一台更大的望远镜解决不了 1000 万倍的亮度差。")
-
-    st.header("办法：让恒星的光自己抵消掉")
-    st.markdown("""
-    换个思路：如果能先把灯塔的光压暗，萤火虫会不会更容易看见？
-
-    我们要用的办法叫**消零干涉**。让两束恒星光以合适的相位叠加，它们就能相互抵消。
-    行星稍微偏离视线中心，它的光经过的路程不同，就不会在同一个条件下完全抵消。
-
-    接下来，我们按这个顺序试一试：
-
-    1. 叠加两列波，看看什么时候会变暗。
-    2. 把两台望远镜放到不同位置，留下行星的光。
-    3. 加入恒星的大小和尘埃，看看现实中会遇到什么麻烦。
-    4. 让阵列旋转，记录行星的信号，再从噪声里找出它。
-
-    准备好了，就在上面的列表中选择 **1：光的干涉**。你只需要用到正弦函数、角度和平方根。
-    """)
-    st.caption("单位提示：1 角秒（″）= 1/3600 度；1 mas（毫角秒）= 0.001 角秒。1 微米（µm）= 10⁻⁶ 米。")
 
 
 def render_interference():
@@ -110,7 +55,7 @@ def render_interference():
                 f"（相当于 {ph % 360:.0f}°）。")
 
     st.success("""
-    **记住这一点：** 同样强的两束光，在相位相反时可以抵消。下一节，我们用两台望远镜来试试这件事。
+    **记住这一点：** 同样强的两束光，在相位相反时可以抵消。接下来先比较恒星和行星的亮度，再看需要把恒星压暗多少。
     """)
     C.think("光程差为 5 µm，对 10 µm 的光会抵消，对 5 µm 的光呢？",
             "对 5 µm 的光，5 µm 正好是 1 个完整波长，波峰又对上了波峰，变成相长干涉。"
@@ -118,63 +63,8 @@ def render_interference():
     C.think("如果两列波振幅不一样（比如一个是 1，一个是 0.9），还能完全抵消吗？",
             "不能完全抵消，最暗时还剩 1 − 0.9 = 0.1 的振幅，亮度是 0.01。所以真实仪器要求两路光的强度非常接近。")
 
-
-def render_two_telescopes():
-    C.goal("""
-    改变两台望远镜之间的距离，试着让恒星变暗、让行星通过。
-    """)
-
-    st.header("原理图")
-    C.show(S.fig_bracewell_setup())
-    st.markdown("""
-    现在把两台望远镜一起对准恒星。它们之间的距离叫做**基线**，记作 b。
-
-    先看左图。来自视线中心的恒星光同时到达两台望远镜。我们让其中一路多出半个波长的相位，再把两路合在一起。
-    这样，两路恒星光在一个出口相互抵消。我们把这个出口叫做**暗输出**。
-
-    再看右图。行星偏离中心一个小角度 θ，它的光到达两台望远镜时有一小段路程差，约为 b·θ。
-    原来为恒星设置的相消条件，对行星不再刚好成立。所以暗输出里还能留下行星光。
-
-    注意：另一侧的行星会让哪一路先到达发生变化，但下面的透过比例不受这个正负号影响。
-    """)
-    st.latex(r"T(\theta) \;=\; \sin^2\!\left(\pi\,\frac{b\,\theta}{\lambda}\right)")
-    st.markdown("""
-    这里的 T 表示透过比例。T = 0 表示被挡住，T = 1 表示完全通过。恒星位于 θ = 0，正好落在零点。
-    """)
-
-    st.header("动手：天空上的\"百叶窗\"")
-    st.markdown("""
-    把天空各个位置的透过比例画出来，就得到了明暗相间的条纹，很像一扇百叶窗。中心的恒星落在暗条上。
-
-    **试试看：** 保持波长 10 微米、行星角距 100 mas，先把基线调到 2 米，再慢慢增大。
-    看着蓝色的行星标记：它什么时候落到亮条上？继续增大基线，透过比例还会一直增加吗？
-    """)
-    c1, c2 = st.columns([1, 2.6])
-    with c1:
-        b = st.slider("基线 b（米）", 2.0, 40.0, C.control_value('lesson_2_b', 14.5), 0.5, key='lesson_2_b')
-        lam = st.slider("波长 λ（微米）", 4.0, 18.0, C.control_value('lesson_2_lam', 10.0), 0.5, key='lesson_2_lam')
-        pmas = st.slider("行星离恒星的角距离（mas）", 10, 250, C.control_value('lesson_2_pmas', 100), 5, key='lesson_2_pmas')
-        Tp = np.sin(np.pi * b * pmas * C.MAS / (lam * 1e-6)) ** 2
-        st.metric("行星透过比例", f"{Tp:.2f}")
-        st.metric("条纹间距 λ/b", f"{lam * 1e-6 / b / C.MAS:.0f} mas")
-        best = lam * 1e-6 / (2 * pmas * C.MAS)
-        st.caption(f"让行星正好落在第一条亮纹上的基线：b = λ/(2θ) ≈ {best:.1f} m")
-    with c2:
-        C.show(S.fig_fringe_1d(b=b, lam_um=lam, planet_mas=pmas))
-
-    st.success("""
-    **你会看到：** 基线变长时，条纹变密。行星会交替经过亮条和暗条，所以基线需要配合目标的角距离来选择。
-    """)
-    C.think("基线调得特别短（比如 2 米），会怎样？",
-            "条纹变得很宽，行星（100 mas）落在中间那条黑条里，和恒星一起被挡掉了。基线太短，分不开恒星和行星。")
-    C.think("同一个基线，换成短波长（4 µm）和长波长（18 µm），哪个条纹更密？",
-            "短波长更密。条纹间距 = λ/b，波长越短，间距越小。所以同一颗行星在不同波长下会落在不同的条纹上。")
-
-
 def render_stellar_leakage():
-    C.goal("""
-    放大恒星所在的暗条，看看恒星为什么还会漏光。
-    """)
+
 
     st.markdown("""
     上一节，我们把恒星当成了一个点。现在把它放大一些：它其实是一个小圆盘。
@@ -223,80 +113,6 @@ def render_stellar_leakage():
     C.think("为什么近处的恒星漏光更多？",
             "距离减半，恒星看起来的角半径 ρ 加倍，零深 ∝ ρ²，变为 4 倍。不过近处的行星也更亮，所以近处的目标总体仍然更容易观测。")
 
-
-def render_phase_chopping():
-    C.goal("""
-    比较两路输出，看看相减后尘埃和行星各自留下多少信号。
-    """)
-
-    st.header("一个新麻烦：尘埃")
-    st.markdown("""
-    压暗恒星之后，我们又遇到了一个麻烦：恒星周围的尘埃也会发出红外光。这部分光叫做**外黄道光**。
-    如果尘埃分布在恒星两侧，两台望远镜的对称条纹会同时接收到它们的光。
-
-    能不能让对称的背景相互抵消，同时留下偏在一边的行星？下面我们换成四台望远镜，得到两路输出，再试着把它们相减。
-    """)
-    C.show(S.fig_xarray_combiner())
-    st.markdown("""
-    沿着图中的箭头看一遍光的去向：
-
-    1. 上边两台望远镜组成一对，下边两台组成另一对。每一对先用上一节的方法压暗恒星。
-    2. 把两对的暗输出再次混合，并引入四分之一个波长的相位差，得到输出 3 和输出 4。
-    3. 用输出 3 减去输出 4。这里把这个差值叫做**斩波信号**。
-
-    先不用记住合束器的每个细节。接下来最值得比较的是：同一圈尘埃，在两路输出里是不是一样亮？
-    """)
-
-    st.header("动手：看看三张透射图")
-    c1, c2 = st.columns([1, 3])
-    with c1:
-        lam = st.slider("波长 λ（微米）", 4.0, 18.0, C.control_value('lesson_4_lam4', 10.0), 0.5, key='lesson_4_lam4')
-        q = st.slider("长方形的长宽比 q", 2.0, 8.0, C.control_value('lesson_4_q', 6.0), 0.5, key='lesson_4_q')
-        ring = st.toggle("显示一圈对称的尘埃环", value=C.control_value('lesson_4_ring', True), key='lesson_4_ring')
-        ring_r = st.slider("尘埃环半径（mas）", 20, 200, C.control_value('lesson_4_ring_r', 60), 5, disabled=not ring, key='lesson_4_ring_r')
-    L = 14.5 / 2; ext = 250
-    g = np.linspace(-ext, ext, 301) * C.MAS
-    A, B = np.meshgrid(g, g)
-    T3, T4 = nl.transmission(A, B, lam * 1e-6, L, q)
-    pxy = np.array([76.6, 64.3])
-    with c2:
-        C.show(S.fig_maps(T3, T4, ext, planet_xy=pxy, ring_r=ring_r if ring else None))
-
-    if ring:
-        th = np.linspace(0, 2 * np.pi, 2000, endpoint=False)
-        r3, r4 = nl.transmission(ring_r * np.cos(th) * C.MAS, ring_r * np.sin(th) * C.MAS, lam * 1e-6, L, q)
-        p3, p4 = nl.transmission(pxy[0] * C.MAS, pxy[1] * C.MAS, lam * 1e-6, L, q)
-        c1, c2 = st.columns(2)
-        with c1:
-            st.markdown("**尘埃环**（平均透过比例）")
-            st.metric("输出 3", f"{r3.mean():.3f}"); st.metric("输出 4", f"{r4.mean():.3f}")
-            st.metric("相减（斩波）", f"{r3.mean() - r4.mean():+.1e}")
-        with c2:
-            st.markdown("**行星**（透过比例）")
-            st.metric("输出 3", f"{p3:.3f}"); st.metric("输出 4", f"{p4:.3f}")
-            st.metric("相减（斩波）", f"{p3 - p4:+.3f}")
-        st.markdown("""
-    **比较一下：** 尘埃环在两路输出中的平均透过比例接近相同，相减后接近零。行星在两路中的透过比例不同，差值就保留下来。
-    """)
-
-    st.markdown("""
-    **试试看：** 打开「显示一圈对称的尘埃环」，改变尘埃环半径，再比较两路数值。
-    然后改变波长，看看相减后的尘埃信号是否仍接近零。
-
-    右边的图用深蓝色表示正信号，棕色表示负信号。关于中心对称的两个位置，信号大小相同、符号相反。
-    一圈对称的尘埃把这些位置都占满了，正负贡献就会抵消。
-
-    这里去掉的是背景的**平均信号**。背景光子的随机起伏还在，第 6 节会接着看它。
-    """)
-    st.success("""
-    **这一步做到了什么？** 两路输出相减后，对称背景的平均信号接近零，偏离中心的行星仍可能留下信号。
-    """)
-    C.think("如果尘埃盘有一团只在一侧的\"疙瘩\"，斩波后会怎样？",
-            "疙瘩不对称，斩波后会留下信号，看起来像一颗行星。这是真实观测中需要小心的\"假行星\"。")
-    C.think("斩波去掉了尘埃的光，是不是尘埃就完全没有影响了？",
-            "不是。相减只去掉了尘埃光的**平均值**，但尘埃光子的随机起伏（噪声）还在，而且尘埃越亮噪声越大。第 6 节会讲。")
-
-
 def render_rotation():
     C.goal("""
     慢慢转动阵列，看看行星的位置怎样变成一条随角度变化的曲线。
@@ -315,10 +131,10 @@ def render_rotation():
 
     c1, c2 = st.columns([1, 3.2])
     with c1:
-        phi = st.slider("阵列转过的角度（度）", 0, 359, C.control_value('lesson_5_phi', 60), 1, key='lesson_5_phi')
-        lam = st.slider("波长 λ（微米）", 4.0, 18.0, C.control_value('lesson_5_lam5', 10.0), 0.5, key='lesson_5_lam5')
-        sep = st.slider("行星离恒星的角距离（mas）", 40, 180, C.control_value('lesson_5_sep5', 100), 5, key='lesson_5_sep5')
-        pa = st.slider("行星的方位角（度）", 0, 359, C.control_value('lesson_5_pa', 40), 5, key='lesson_5_pa')
+        phi = st.slider("阵列转过的角度（度）", 0, 359, C.control_value('lesson_6_phi', 60), 1, key='lesson_6_phi')
+        lam = st.slider("波长 λ（微米）", 4.0, 18.0, C.control_value('lesson_6_lam5', 10.0), 0.5, key='lesson_6_lam5')
+        sep = st.slider("行星离恒星的角距离（mas）", 40, 180, C.control_value('lesson_6_sep5', 100), 5, key='lesson_6_sep5')
+        pa = st.slider("行星的方位角（度）", 0, 359, C.control_value('lesson_6_pa', 40), 5, key='lesson_6_pa')
     L, q = 7.25, 6.0
     ext = 250
     g = np.linspace(-ext, ext, 241) * C.MAS
@@ -337,12 +153,12 @@ def render_rotation():
     下面的两条曲线来自两个候选位置。先把方位角差和角距离差都设成 0，让它们完全重合。
 
     **再试一次：** 只把第二颗的方位角增加 10°，其他参数不变。两条曲线还一样吗？再把角距离改大一点，比较变化。
-    第 7 节就会用这样的曲线去匹配观测数据。
+    第 8 节就会用这样的曲线去匹配观测数据。
     """)
     c1, c2 = st.columns([1, 3.2])
     with c1:
-        dpa = st.slider("第二颗的方位角比第一颗多（度）", 0, 90, C.control_value('lesson_5_dpa', 10), 1, key='lesson_5_dpa')
-        dsep = st.slider("第二颗的角距离比第一颗多（mas）", -30, 30, C.control_value('lesson_5_dsep', 0), 1, key='lesson_5_dsep')
+        dpa = st.slider("第二颗的方位角比第一颗多（度）", 0, 90, C.control_value('lesson_6_dpa', 10), 1, key='lesson_6_dpa')
+        dsep = st.slider("第二颗的角距离比第一颗多（mas）", -30, 30, C.control_value('lesson_6_dsep', 0), 1, key='lesson_6_dsep')
     psky2 = np.array([(sep + dsep) * np.cos(np.deg2rad(pa + dpa)), (sep + dsep) * np.sin(np.deg2rad(pa + dpa))])
     da2, db2 = nl.sky_to_array(psky2[0] * C.MAS, psky2[1] * C.MAS, phis)
     s2 = np.subtract(*nl.transmission(da2, db2, lam * 1e-6, L, q))
@@ -364,7 +180,6 @@ def render_rotation():
     C.think("转了半圈之后，信号和前半圈有什么关系？",
             "正好反号。转半圈后，行星走到了对称点上，而斩波图在对称点上颜色相反。看右图：180° 之后的曲线是前 180° 的\"倒影\"。")
 
-
 def render_photon_noise():
     C.goal("""
     多收集一些光子，再延长观测时间，比较随机起伏和信号的变化。
@@ -383,7 +198,7 @@ def render_photon_noise():
     """)
     c1, c2 = st.columns([1, 2.4])
     with c1:
-        N = st.select_slider("平均每次接到的光子数 N", options=[10, 30, 100, 300, 1000, 3000, 10000], value=C.control_value('lesson_6_N', 100), key='lesson_6_N')
+        N = st.select_slider("平均每次接到的光子数 N", options=[10, 30, 100, 300, 1000, 3000, 10000], value=C.control_value('lesson_7_N', 100), key='lesson_7_N')
         st.metric("起伏大小 √N", f"{np.sqrt(N):.0f}")
         st.metric("相对起伏 √N / N", f"{1 / np.sqrt(N):.1%}")
     with c2:
@@ -435,8 +250,8 @@ def render_photon_noise():
     """)
     c1, c2 = st.columns([1, 2.4])
     with c1:
-        hours = st.slider("观测时间（小时）", 1.0, 50.0, C.control_value('lesson_6_hours', 10.0), 1.0, key='lesson_6_hours')
-        w = st.select_slider("看哪个波长的数据（微米）", options=[f"{v:.1f}" for v in wl], value=C.control_value('lesson_6_w', f"{wl[22]:.1f}"), key='lesson_6_w')
+        hours = st.slider("观测时间（小时）", 1.0, 50.0, C.control_value('lesson_7_hours', 10.0), 1.0, key='lesson_7_hours')
+        w = st.select_slider("看哪个波长的数据（微米）", options=[f"{v:.1f}" for v in wl], value=C.control_value('lesson_7_w', f"{wl[22]:.1f}"), key='lesson_7_w')
         wi = [f"{v:.1f}" for v in wl].index(w)
         snr = bud["snr_total"] * np.sqrt(hours / 10)
         st.metric("全部波长合起来的 SNR", f"{snr:.1f}", delta="已达到 5" if snr >= 5 else "还不到 5")
@@ -467,7 +282,6 @@ def render_photon_noise():
     C.think("为什么短波长的数据几乎没用？",
             "短波长时行星本身很暗（它的温度只有约 255 K，主要在长波长发光），而恒星漏光又最多（零深 ∝ 1/λ²）。信号小、噪声大。")
 
-
 def render_planet_search():
     C.goal("""
     把观测数据和候选信号逐个比较，试着从噪声里找出行星。
@@ -485,19 +299,19 @@ def render_planet_search():
     然后把观测时间调长，再比较结果。加权的作用，是让噪声较大的波长少影响一些判断。
     """)
 
-    if "seed7" not in st.session_state:
-        st.session_state.seed7 = 0
+    if "seed8" not in st.session_state:
+        st.session_state.seed8 = 0
     c1, c2 = st.columns([1, 2.6])
     with c1:
-        hours = st.slider("观测时间（小时）", 1.0, 40.0, C.control_value('lesson_7_h7', 10.0), 1.0, key='lesson_7_h7')
-        weighted = st.toggle("按噪声大小给各波长加权", value=C.control_value('lesson_7_weighted', True), key='lesson_7_weighted')
-        if st.button("再观测一次（换一组随机噪声）", key='action_7_resample'):
-            st.session_state.seed7 += 1
+        hours = st.slider("观测时间（小时）", 1.0, 40.0, C.control_value('lesson_8_h7', 10.0), 1.0, key='lesson_8_h7')
+        weighted = st.toggle("按噪声大小给各波长加权", value=C.control_value('lesson_8_weighted', True), key='lesson_8_weighted')
+        if st.button("再观测一次（换一组随机噪声）", key='action_8_resample'):
+            st.session_state.seed8 += 1
     bd = C.bundle()
     tpl = C.templates()
     f = hours / 10
     e3, e4 = bd["e3"] * f, bd["e4"] * f
-    rng = np.random.default_rng(st.session_state.seed7)
+    rng = np.random.default_rng(st.session_state.seed8)
     data = nl.simulate_chop(e3, e4, rng)
     w = 1.0 / (e3 + e4).mean(axis=1) if weighted else None
     cm = nl.correlation_map(tpl, data, w)
@@ -535,7 +349,7 @@ def render_planet_search():
     **再试一次：** 点击下面的按钮，在相同条件下生成 100 组独立噪声。我们暂把定位误差小于 10 mas 记作「找对」。
     记录找对的次数，再换一个观测时间重复一次。哪种方案更可靠？
     """)
-    if st.button("开始 100 次模拟", key='action_7_simulate'):
+    if st.button("开始 100 次模拟", key='action_8_simulate'):
         rng = np.random.default_rng(100)
         errs = np.array([np.hypot(*(nl.locate(tpl, nl.correlation_map(tpl, nl.simulate_chop(e3, e4, rng), w))[1] - true))
                          for _ in range(100)])
@@ -560,90 +374,176 @@ def render_planet_search():
     C.think("找到位置以后，还能得到什么？",
             "在找到的位置上，逐个波长比较数据和指纹的幅度，就能得到行星在每个波长的亮度——也就是行星的**光谱**，可以用来研究它的温度和大气。")
 
-
-def render_parameter_lab():
-    C.goal("""
-    自己选一个目标，找一组更容易发现宜居带行星的观测参数。
-    """)
-
+def render_contrast():
+    C.goal("比较恒星和行星的亮度，再看看衍射光斑怎样影响分辨。")
     st.markdown("""
-    最后，把前面的想法放在一起，自己设计一次观测。
+    假设一座灯塔旁边有一只萤火虫。两者都能发光，但我们收到的光相差多少？
+    这里把**行星通量除以恒星通量**定义为对比度 C。C = 10⁻⁷，表示行星只有恒星的一千万分之一亮。
+    对比度描述光源本身的亮度差；能否分开两个光点，还要看它们的角距离和望远镜的衍射光斑。
 
-    这里假设每颗恒星旁边都有一颗地球大小的行星，放在接收恒星能量与地球相近的位置。
-    这个位置位于我们粗略估计的**宜居带**；模型使用约 255 K 的行星有效温度，并不表示那里一定适合生命。
-
-    **先试试看：** 保持类太阳恒星、10 pc 和 1 倍尘埃不变，只改变基线。看下面的曲线，哪个基线附近的 SNR 较高？
-    接着只改距离，或者只改尘埃量，再比较曲线。一次只改一个条件，更容易看清它的作用。
+    **试试看：** 先保持口径 4 米不变，把对比度从 10⁻⁷ 调到 10⁻⁴。只改变行星的亮度，恒星曲线会怎样？
+    然后把对比度调回去，只增大口径，比较光斑的宽度。
     """)
+    c1, c2 = st.columns([1, 2.6])
+    with c1:
+        exponent = st.slider("对比度的十进制指数", -10., -3., C.control_value('lesson_2_contrast', -7.), .5, key='lesson_2_contrast')
+        diameter = st.slider("单集光器口径（米）", 1., 40., C.control_value('lesson_2_D', 4.), .5, key='lesson_2_D')
+        wavelength = st.slider("波长（微米）", 4., 18., C.control_value('lesson_2_wl', 10.), .5, key='lesson_2_wl')
+        st.metric("行星 / 恒星", f"{10**exponent:.1e}")
+        st.metric("恒星 / 行星", f"{10**(-exponent):.1e}")
+    with c2:
+        C.show(S.fig_single_telescope_blur(D=diameter, lam_um=wavelength, contrast=10**exponent))
+    st.markdown("棕色曲线是恒星，蓝色曲线是行星。这里分别画出两者的光斑，真实观测接收到的是叠加后的强度。")
+    C.think("把恒星和行星一起移到更远处，对比度会改变吗？",
+            "在忽略消光、两者仍处于同一系统的条件下，两者通量都按距离平方反比下降，比值近似不变；角距离却会变小。")
+
+
+def render_null_depth():
+    C.goal("把对比度与消零深度分开：一个描述光源，另一个描述恒星光被压低了多少。")
+    st.markdown("""
+    上一节的 C 是行星与恒星的通量比。现在我们调节仪器，看看能把恒星压暗到什么程度。
+    在这个双光束实验里，把**暗输出强度除以亮输出强度**记作消零深度 N。数值越小，消零越深。
+
+    **试试看：** 先把两束光的振幅比设成 1、残余相位误差设成 0°。再只改变其中一项。
+    波峰和波谷相加后，还能刚好为零吗？
+    """)
+    c1, c2 = st.columns([1, 2.6])
+    with c1:
+        amp = st.slider("第二束 / 第一束的振幅比", .5, 1.5, C.control_value('lesson_3_amp', 1.), .01, key='lesson_3_amp')
+        error = st.slider("残余相位误差（度）", -20., 20., C.control_value('lesson_3_error', 0.), .25, key='lesson_3_error')
+        null, leakage = O.two_beam_null(amp, error)
+        st.metric("消零深度 N（暗 / 亮）", f"{null:.2e}")
+        st.metric("漏光 / 入射总强度", f"{leakage:.2e}")
+    with c2:
+        C.show(S.fig_null_depth(amp, error))
+    st.latex(r"N=\frac{1+a^2-2a\cos\delta}{1+a^2+2a\cos\delta}")
+    st.markdown("a 是振幅比，δ 是偏离理想相消条件的相位误差。深消零时，暗/亮比与漏光/入射总光近似相等。")
+    st.header("再看一个限制：恒星有大小")
+    st.markdown("下面暂时恢复理想振幅和相位，只看恒星圆盘带来的几何漏光。这里的漏光比例以入射恒星总通量为分母。")
+    render_stellar_leakage()
+
+
+def render_combiner():
+    C.goal("先看四路电场怎样通过矩阵合成，再把单孔衍射包络放进去。")
+    st.markdown("""
+    现在把两台集光器扩展为四台。按图中编号，四个位置依次是 (L,qL)、(L,−qL)、(−L,−qL)、(−L,qL)，其中 L=b/2。
+    对同一个天空方向，每个集光器收到一束带有几何相位的电场。**先把复振幅按矩阵相加，再取模平方**，得到输出强度。
+    """)
+    with st.expander("先看四集光器的位置与光路", expanded=False):
+        C.show(S.fig_xarray_combiner())
+    st.latex(r"\mathbf w=U\mathbf v,\qquad U=\frac12\begin{pmatrix}1&i&i&1\\1&-i&-i&1\\1&i&-i&-1\\1&-i&i&-1\end{pmatrix}")
+    st.markdown("矩阵的每一列对应一个集光器，每一行对应一路输出。1、−1、i、−i 分别表示 0、π、π/2、−π/2 的相位权重。第 3、4 行对应两路暗输出；把它们相减，就得到斩波信号。")
+    st.latex(r"v_j=\exp\!\left[\frac{2\pi i}{\lambda}(x_j\alpha+y_j\beta)\right],\qquad T_k=\frac{|(U\mathbf v)_k|^2}{4}")
+    st.markdown("轴上恒星让四路输入同相。看看第 3 行的系数：1+i−i−1=0，所以这个方向被消零。分母 4 是四臂入射总功率；四路 T 相加为 1。")
+    st.header("干涉和衍射，怎样同时进入合光？")
+    st.markdown("""
+    每台集光器还有有限的口径。对相同、无像差的圆孔，在夫琅禾费近似下，可以把响应分成两部分：
+    **单孔衍射包络 A** 决定大范围的接收权重，**阵列干涉项 T** 决定里面细密的明暗条纹。
+    它们来自同一个场叠加问题；相同孔径让共同的衍射振幅可以提到求和号外。
+    """)
+    st.latex(r"e(\theta)=\frac{2J_1(u)}{u},\quad u=\frac{\pi D\theta}{\lambda},\quad E_k=e(\theta)(U\mathbf v)_k,\quad R_k=A\,T_k,\ A=|e|^2")
+    st.caption("这里使用理想圆孔的衍射包络示范分离关系；实际单模光纤接收权重还需做模场重叠积分。")
     c1, c2, c3 = st.columns(3)
     with c1:
-        star = st.radio("恒星类型", list(C.STAR_TYPES), key='lesson_8_star', index=list(C.STAR_TYPES).index(C.control_value('lesson_8_star', next(iter(C.STAR_TYPES)))))
-        T_star, R_star = C.STAR_TYPES[star]
+        diameter = st.slider("单孔口径 D（米）", 1., 12., C.control_value('lesson_4_D', 4.), .5, key='lesson_4_D')
+        baseline = st.slider("消零基线 b（米）", 4., 40., C.control_value('lesson_4_b', 14.5), .5, key='lesson_4_b')
     with c2:
-        d = st.slider("恒星距离（pc）", 4.0, 20.0, C.control_value('lesson_8_d', 10.0), 0.5, key='lesson_8_d')
-        z = st.select_slider("尘埃量（外黄道光，单位：太阳系的倍数）", options=[0.5, 1, 2, 3, 5, 10, 20, 30, 50], value=C.control_value('lesson_8_z', 1), key='lesson_8_z')
+        wavelength = st.slider("波长（微米）", 4., 18., C.control_value('lesson_4_wl', 10.), .5, key='lesson_4_wl')
+        ratio = st.slider("长短基线比 q", 2., 8., C.control_value('lesson_4_q', 6.), .5, key='lesson_4_q')
     with c3:
-        b = st.slider("基线 b（米）", 6.0, 80.0, C.control_value('lesson_8_b', 14.5), 0.5, key='lesson_8_b')
-        hours = st.slider("观测时间（小时）", 1.0, 50.0, C.control_value('lesson_8_h8', 10.0), 1.0, key='lesson_8_h8')
+        alpha = st.slider("试探光源的 α（mas）", -200., 200., C.control_value('lesson_4_alpha', 0.), 5., key='lesson_4_alpha')
+        beta = st.slider("试探光源的 β（mas）", -200., 200., C.control_value('lesson_4_beta', 0.), 5., key='lesson_4_beta')
+    samples = max(241, int(np.ceil(800*C.MAS*ratio*baseline/(wavelength*1e-6)*3)) | 1)
+    grid = np.linspace(-400, 400, samples)
+    X, Y = np.meshgrid(grid*C.MAS, grid*C.MAS)
+    fringe = O.response(X, Y, wavelength*1e-6, baseline, ratio, diameter, diffraction=False)
+    envelope = O.airy_amplitude(X, Y, wavelength*1e-6, diameter)**2
+    C.show(S.fig_optical_response(grid, envelope, fringe[2], envelope*fringe[2]))
+    st.markdown("**试试看：** 先只改 D，观察包络宽度；再只改 b，观察条纹间距。恒星、行星参数没有参与这张仪器响应图的计算。")
+    point = O.response(alpha*C.MAS, beta*C.MAS, wavelength*1e-6, baseline, ratio, diameter)
+    columns = st.columns(4)
+    for k, col in enumerate(columns): col.metric(f"输出 {k+1} / 入射总功率", f"{point[k]:.4f}")
+    C.show(S.fig_phasors(O.COMBINER[2] * O.fields(alpha*C.MAS, beta*C.MAS, wavelength*1e-6, baseline, ratio)))
+    st.caption("相量图画出干涉项；上面的四路功率还乘入了衍射包络。轴上四个带权相量闭合，离轴后通常不再闭合。")
 
-    L_star = R_star**2 * (T_star / 5780) ** 4
-    a_au = np.sqrt(L_star)
-    sep_mas = a_au / d * 1000
-    bd = C.bundle(baseline=b, distance=d, exozodi=float(z), T_star=T_star, R_star=R_star)
-    scale = np.sqrt(hours / 10.0)           # SNR ∝ √观测时间
-    snr = bd["bud"]["snr_total"] * scale
-    need = hours * (5 / snr) ** 2
 
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("宜居带离恒星", f"{a_au:.2f} au")
-    m2.metric("看起来的角距离", f"{sep_mas:.0f} mas")
-    m3.metric(f"SNR（{hours:g} 小时）", f"{snr:.1f}", delta="可以探测" if snr >= 5 else "还不够", delta_color="normal" if snr >= 5 else "inverse")
-    m4.metric("达到 SNR = 5 需要", f"{need:.1f} 小时" if need < 1e4 else "> 10000 小时")
-
-    st.subheader("哪个基线最好？")
-    bs = np.array([6, 8, 10, 12, 14.5, 18, 22, 28, 36, 46, 60, 80.0])
-    snrs = np.array([C.bundle(baseline=x, distance=d, exozodi=float(z), T_star=T_star, R_star=R_star)["bud"]["snr_total"] for x in bs]) * scale
-    fig, ax = plt.subplots(figsize=(8.4, 3.0))
-    ax.plot(bs, snrs, "o-", color=S.PLANET)
-    ax.plot(b, snr, "*", color=S.RED, ms=16, label="当前选择")
-    ax.axhline(5, color="0.5", ls=":", lw=1); ax.text(bs[0], 5.2, "SNR = 5", fontsize=8.5, color="0.4")
-    ax.set_xscale("log"); ax.set_xticks(bs); ax.set_xticklabels([f"{x:g}" for x in bs]); ax.xaxis.set_minor_formatter(plt.NullFormatter())
-    ax.set_xlabel("基线 b（米）"); ax.set_ylabel(f"SNR（{hours:g} 小时）"); ax.legend(loc="upper left")
-    C.show(fig)
-    best = bs[np.argmax(snrs)]
-    st.markdown(f"在这组条件下，SNR 最高的基线约为 **{best:g} m**（上面只计算了图中这几个基线）。"
-                f"粗略估计：让行星落在第一条亮纹上的基线 b ≈ λ/(2θ)，在 10 µm 处约为 **{10e-6 / (2 * sep_mas * C.MAS):.0f} m**。")
-
-    st.subheader("挑战任务")
+def render_sky_lab():
+    C.goal("固定仪器，改变目标与尘埃，再把天空亮度乘上接收响应，比较输出图。")
     st.markdown("""
-    准备好后，选一个小任务试试。先做预测，再调参数，最后用图和数值解释你的选择。
-
-    1. 把恒星换成**红矮星**，距离保持 10 pc。14.5 米基线合适吗？试着寻找一个 SNR 更高的基线。
-    2. 换回**类太阳恒星**和 1 倍尘埃。逐渐增加距离：在 10 小时内，哪些距离还能达到这里的 SNR = 5 参考线？
-    3. 回到 10 pc，把尘埃量从 1 调到 30。达到参考线需要的时间怎样变？
-    4. 如果目标在 15 pc 外，而你只有 10 小时，试着选一条基线，并说明理由。
-
-    这些结果来自一台理想仪器。先用它看清趋势，再想想真实仪器还会增加哪些限制。
+    刚才的响应图回答：来自天空某个方向的光，有多少进入某一路输出？现在再问：这个方向原本有多少光？
+    把恒星、行星和尘埃的亮度分布放进来，才能算出实际接收到的贡献。
+    不同天空位置的热辐射彼此不相干，所以对每个方向完成合束后，**相加强度**。
     """)
-    C.think("红矮星的宜居带很近（十几 mas），为什么在合适的基线下反而容易观测？",
-            "红矮星本身很暗、看起来很小，漏光少；而宜居带行星的温度和大小和地球一样，发出的红外光一样多。"
-            "只要基线足够长（几十米），让行星落在亮纹上，SNR 反而更高。")
-    C.think("这个实验室假设了一台\"完美\"的仪器。真实的仪器还要考虑什么？",
-            "例如四路光的强度能否做到完全相等、光程能否控制到纳米级、望远镜指向是否稳定。这些都会让恒星多漏光，是更深入的课题。")
+    st.latex(r"F_k=\int I(\alpha,\beta)R_k(\alpha,\beta)\,d\Omega")
+    st.markdown("**先做一组对照：** 保持仪器不变，只把行星半径调为两倍，比较它的位置和通量；再只增加尘埃量，比较背景。")
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.subheader("目标恒星")
+        ts = st.slider("恒星温度（K）", 3000., 8000., C.control_value('lesson_5_ts', 5778.), 100., key='lesson_5_ts')
+        rs = st.slider("恒星半径（太阳半径）", .3, 2., C.control_value('lesson_5_rs', 1.), .1, key='lesson_5_rs')
+        distance = st.slider("系统距离（pc）", 3., 30., C.control_value('lesson_5_distance', 10.), .5, key='lesson_5_distance')
+    with c2:
+        st.subheader("行星")
+        tp = st.slider("行星温度（K）", 150., 450., C.control_value('lesson_5_tp', 255.), 5., key='lesson_5_tp')
+        rp = st.slider("行星半径（地球半径）", .5, 3., C.control_value('lesson_5_rp', 1.), .1, key='lesson_5_rp')
+        orbit = st.slider("投影分离距离（au）", .2, 3., C.control_value('lesson_5_orbit', 1.), .1, key='lesson_5_orbit')
+        pa = st.slider("行星方位角（度）", 0., 350., C.control_value('lesson_5_planet_pa', 40.), 5., key='lesson_5_planet_pa')
+    with c3:
+        st.subheader("黄道尘")
+        ez = st.slider("外黄道尘量（太阳系倍数）", 0., 50., C.control_value('lesson_5_ez', 1.), .5, key='lesson_5_ez')
+        lz = st.slider("本地黄道光强度系数", 0., 5., C.control_value('lesson_5_lz', 1.), .1, key='lesson_5_lz')
+        latitude = st.slider("目标黄道纬度（度）", 0., 90., C.control_value('lesson_5_lat', 45.), 5., key='lesson_5_lat')
+    with st.expander("仪器参数：把衍射与干涉的变化也加进来"):
+        c1, c2 = st.columns(2)
+        with c1:
+            wl = st.slider("观测波长（微米）", 4., 18., C.control_value('lesson_5_wl', 10.), .5, key='lesson_5_wl')
+            diameter = st.slider("集光器口径（米）", 1., 12., C.control_value('lesson_5_D', 4.), .5, key='lesson_5_D')
+        with c2:
+            baseline = st.slider("基线（米）", 4., 40., C.control_value('lesson_5_b', 14.5), .5, key='lesson_5_b')
+            rotation = st.slider("阵列旋转角（度）", 0., 180., C.control_value('lesson_5_rotation', 0.), 5., key='lesson_5_rotation')
+    experiment = O.sky_experiment(star_temperature=ts, star_radius=rs, distance=distance,
+        planet_temperature=tp, planet_radius=rp, orbit_au=orbit, position_angle=pa,
+        exozodi=ez, local_zodi=lz, latitude=latitude, wavelength_um=wl,
+        baseline=baseline, diameter=diameter, rotation=rotation)
+    component = st.radio("查看哪些光源", ['全部光源', '恒星', '行星', '本地黄道光', '外黄道光'],
+        index=['全部光源', '恒星', '行星', '本地黄道光', '外黄道光'].index(C.control_value('lesson_5_component', '全部光源')),
+        key='lesson_5_component', horizontal=True)
+    C.show(S.fig_sky_contributions(experiment, component))
+    st.caption("固定参考通量：10 pc 处、255 K、地球半径的行星在 10 微米谱道内的入射通量。色标固定，不随滑动条自动归一化。圆圈标出行星。")
+    st.caption("这是透射加权的天空贡献图，不是直接拍摄或重建的探测器图像。恒星和行星未分辨，用单像素示意；恒星漏光在独立细网格上积分。")
+    if not experiment['in_view']: st.info("行星已移出当前 ±400 mas 的示意视场。可以减小投影距离或增大系统距离。")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("本谱道对比度（行星 / 恒星）", f"{experiment['planet_flux']/experiment['stellar_flux']:.2e}")
+    c2.metric("恒星角半径", f"{experiment['rho_mas']:.2f} mas")
+    c3.metric("输出 3 的恒星漏光 / 入射恒星", f"{experiment['stellar_counts'][2]/experiment['stellar_flux']:.2e}")
+    table = ['| 光源 | 输出 3 | 输出 4 | 差值 3 − 4 |', '|---|---:|---:|---:|']
+    for name, image in experiment['output'].items():
+        rates = image.sum(axis=(1, 2))
+        table.append(f"| {name} | {rates[2]:.3g} | {rates[3]:.3g} | {rates[2]-rates[3]:+.3g} |")
+    st.markdown('\n'.join(table))
+    st.caption("表中单位：光子 / 秒 / 平方米，单谱道宽度 Δλ=λ/20；未乘集光总面积与后端效率。")
+    st.markdown("""
+    **接着试试看：**
 
+    - 只增加恒星半径：恒星更亮，也更大，几何漏光会怎样变？
+    - 只改变行星的方位角或投影距离：行星会经过哪一条明纹或暗纹？
+    - 只改变外黄道尘量：输出 3 的背景怎样变？对称尘埃在输出 3 − 4 的总通量里还剩多少？
+    - 只改变黄道纬度：本地黄道光的背景强度是否改变？
 
-# 章节导航与渲染函数一一对应；计算和图件仍放在独立模块中。
-SECTIONS = (
-    ('导读：为什么难，怎样看见行星', '一套给大一同学的互动讲义 · 在本页选择章节，循序学习', render_introduction),
-    ('光的干涉', '两列波叠在一起，会变亮还是变暗？', render_interference),
-    ('两台望远镜消零', '让恒星的光自己抵消，行星的光留下来', render_two_telescopes),
-    ('恒星的漏光', '恒星不是一个点', render_stellar_leakage),
-    ('四台望远镜与斩波', '两路输出相减，去掉对称的背景', render_phase_chopping),
-    ('旋转阵列', '转起来，行星的位置变成一串"指纹"', render_rotation),
-    ('光子噪声与信噪比', '光是一颗一颗到来的', render_photon_noise),
-    ('找到行星', '拿"指纹库"去比对', render_planet_search),
-    ('参数实验室', '自己设计望远镜，挑选观测目标', render_parameter_lab),
-)
+    正负尘埃贡献是在对整个对称分布积分后抵消，单个像素仍可能非零。平均值抵消也不会消除光子噪声。
+    这里采用黑体恒星/行星和正面朝向的轴对称尘埃盘。恒星光度会同时影响尘埃温度；温度、半径与行星位置可独立调节，用来分辨各因素的作用。
+    """)
+
+SECTIONS = {
+    1: ("光的干涉", "先叠加两列波", render_interference),
+    2: ("对比度", "再比较恒星和行星有多亮", render_contrast),
+    3: ("消零深度", "看看恒星光被压低了多少", render_null_depth),
+    4: ("四集光器合光矩阵", "把干涉与衍射放在同一个响应里", render_combiner),
+    5: ("恒星、行星与黄道尘", "用滑动条比较天空贡献图", render_sky_lab),
+    6: ("进阶：旋转阵列", "从空间位置到信号形状", render_rotation),
+    7: ("进阶：光子噪声", "背景平均值抵消后，噪声还在", render_photon_noise),
+    8: ("进阶：找到行星", "比较候选信号，估计位置", render_planet_search),
+}
 
 
 def section_label(index):
@@ -651,17 +551,12 @@ def section_label(index):
 
 
 def main():
-    C.page("看见另一颗地球：消零干涉入门", "一起动手：压暗恒星，从噪声里找出行星")
-    st.markdown("先猜一猜，再调一调。观察图怎样变化，需要时点开「想一想」查看提示。")
-    section = st.radio(
-        "选择章节：", range(len(SECTIONS)), format_func=section_label,
-        key="selected_section",
-    )
+    C.page("从光的干涉到四集光器消零", "先猜一猜，再调一调：三个概念、一个合光矩阵、一组天空实验")
+    st.markdown("依次认识光干涉、对比度和消零深度，再看四路光怎样合成，最后改变恒星、行星与黄道尘参数。")
+    section = st.radio("选择章节：", list(SECTIONS), format_func=section_label, key="curriculum_section")
     st.divider()
     _, subtitle, render = SECTIONS[section]
-    st.header(section_label(section))
-    if section:
-        st.caption(subtitle)
+    st.header(section_label(section)); st.caption(subtitle)
     render()
     C.save_controls(section)
 

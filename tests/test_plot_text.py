@@ -14,12 +14,13 @@ import schematics as S
 class PlotTextTests(unittest.TestCase):
     def test_all_chinese_characters_have_glyphs_in_bundled_font(self):
         root = Path(__file__).resolve().parents[1]
-        source = "".join((root / name).read_text() for name in ["app.py", "app_common.py", "schematics.py"])
+        source = "".join((root / name).read_text() for name in ["app.py", "app_common.py", "schematics.py", "optics.py"])
         characters = set(re.findall(r"[\u3400-\u9fff]", source))
         glyphs = FT2Font(str(S.FONT_PATH)).get_charmap()
         self.assertEqual(sorted(char for char in characters if ord(char) not in glyphs), [])
         resolved = font_manager.findfont(font_manager.FontProperties(family=S.FONT_FAMILY))
         self.assertEqual(Path(resolved).resolve(), S.FONT_PATH.resolve())
+        self.assertEqual(S.FONT_FAMILY, "Noto Serif CJK SC")
 
     def test_long_chinese_titles_fit_and_render_without_missing_glyphs(self):
         with warnings.catch_warnings(record=True) as caught:
