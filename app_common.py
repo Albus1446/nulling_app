@@ -2,6 +2,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import streamlit as st
+from io import BytesIO
 
 import core as nl
 import schematics as S
@@ -18,17 +19,21 @@ def page(title, subtitle=None):
 
 def show(fig):
     import os
+    S.prepare_figure(fig)
+    image = BytesIO()
+    fig.savefig(image, format="png", bbox_inches="tight", pad_inches=0.2, dpi=160)
     out = os.environ.get("NULLING_APP_SAVE_FIGS")      # 仅用于离线检查图件，正常使用时不设置
     if out:
         os.makedirs(out, exist_ok=True)
         n = len(os.listdir(out))
-        fig.savefig(os.path.join(out, f"fig{n:02d}.png"), bbox_inches="tight", dpi=90)
-    st.pyplot(fig, clear_figure=True)
+        with open(os.path.join(out, f"fig{n:02d}.png"), "wb") as output:
+            output.write(image.getvalue())
+    st.image(image.getvalue(), width="stretch")
     plt.close(fig)
 
 
 def goal(text):
-    st.info("**这一节你会学到：** " + text)
+    st.info("**这一节的实验：** " + text.strip())
 
 
 def think(question, answer):

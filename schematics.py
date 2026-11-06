@@ -3,23 +3,39 @@ import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib import font_manager
+from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.patches import Circle, FancyBboxPatch, FancyArrowPatch, Polygon, Rectangle, Arc
+from pathlib import Path
 
-STAR = "#E69F00"      # 恒星：橙
-PLANET = "#0072B2"    # 行星：蓝
-DARK = "#2B2D42"      # 暗输出
-BRIGHT = "#F2C14E"    # 亮输出
-DUST = "#AA4499"      # 尘埃：紫
-GREY = "#8D99AE"
-RED = "#D55E00"
+NAVY = "#141521"
+DEEP_BLUE = "#2D3C81"
+ACCENT_BLUE = "#4EA4EF"
+LIGHT = "#DAE2ED"
+WARM = "#937562"
+STAR = WARM
+PLANET = ACCENT_BLUE
+DARK = NAVY
+BRIGHT = LIGHT
+DUST = DEEP_BLUE
+GREY = "#9AAAC2"
+RED = DEEP_BLUE  # 保留现有调用名称；第二条曲线使用深蓝色。
+SIGNED_CMAP = LinearSegmentedColormap.from_list("nulling_signed", [WARM, "#FFFFFF", DEEP_BLUE])
+
+# 字体随项目分发，云端绘图无需系统字体或运行时下载。
+FONT_PATH = Path(__file__).resolve().parent / "assets/fonts/NotoSansSC-Regular.otf"
+font_manager.fontManager.addfont(str(FONT_PATH))
+FONT_FAMILY = font_manager.FontProperties(fname=str(FONT_PATH)).get_name()
 
 MAS = np.pi / 180 / 3600 / 1000
 
 
 def style():
     plt.rcParams.update({
-        "font.sans-serif": ["PingFang SC", "Heiti SC", "Microsoft YaHei", "SimHei", "Noto Sans CJK SC",
-                            "WenQuanYi Micro Hei", "Arial Unicode MS", "DejaVu Sans"],
+        "font.family": "sans-serif",
+        "font.sans-serif": [FONT_FAMILY, "DejaVu Sans"],
+        "text.color": NAVY, "axes.labelcolor": NAVY, "axes.edgecolor": NAVY,
+        "xtick.color": NAVY, "ytick.color": NAVY,
         "axes.unicode_minus": False, "font.size": 10, "axes.titlesize": 11, "axes.labelsize": 10,
         "axes.spines.top": False, "axes.spines.right": False, "legend.frameon": False,
         "figure.dpi": 110, "image.origin": "lower",
@@ -27,6 +43,34 @@ def style():
 
 
 style()
+
+
+def prepare_figure(fig):
+    """按实际字宽换行标题，并为轴标签、图例预留空间。"""
+    if fig.get_layout_engine() is None:
+        fig.set_layout_engine("constrained")
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    for ax in fig.axes:
+        title = ax.title
+        text = title.get_text()
+        if not text:
+            continue
+        available = ax.get_window_extent(renderer).width
+        if title.get_window_extent(renderer).width <= available:
+            continue
+        lines = []
+        for paragraph in text.splitlines():
+            line = ""
+            for char in paragraph:
+                width = renderer.get_text_width_height_descent(line + char, title.get_fontproperties(), False)[0]
+                if line and width > available:
+                    lines.append(line)
+                    line = char
+                else:
+                    line += char
+            lines.append(line)
+        title.set_text("\n".join(lines))
 
 
 def _arrow(ax, p0, p1, color="k", lw=1.5, ms=12, ls="-", z=3):
@@ -42,7 +86,7 @@ def _dish(ax, x, y, w=0.9, color="0.25", label=None):
         ax.text(x, y - 0.6, label, ha="center", va="top", fontsize=9)
 
 
-def _box(ax, x, y, w, h, text, fc="#EDF2F4", ec="0.3", fs=9, z=4):
+def _box(ax, x, y, w, h, text, fc=LIGHT, ec="0.3", fs=9, z=4):
     ax.add_patch(FancyBboxPatch((x - w / 2, y - h / 2), w, h, boxstyle="round,pad=0.02,rounding_size=0.08",
                                 fc=fc, ec=ec, lw=1.2, zorder=z))
     ax.text(x, y, text, ha="center", va="center", fontsize=fs, zorder=z + 1)
@@ -53,19 +97,19 @@ def _box(ax, x, y, w, h, text, fc="#EDF2F4", ec="0.3", fs=9, z=4):
 # ---------------------------------------------------------------------------
 def fig_contrast_cartoon():
     """萤火虫与灯塔：亮度与角距的直观示意。"""
-    fig, ax = plt.subplots(figsize=(7.2, 2.8))
+    fig, ax = plt.subplots(figsize=(8.4, 3.2), constrained_layout=True)
     ax.set_xlim(0, 10); ax.set_ylim(0, 4); ax.axis("off")
     for r, a in zip(np.linspace(1.4, 0.3, 12), np.linspace(0.04, 0.5, 12)):
         ax.add_patch(Circle((2.2, 2), r, color=STAR, alpha=a, lw=0))
-    ax.add_patch(Circle((2.2, 2), 0.28, color="#FFF3B0", zorder=3))
+    ax.add_patch(Circle((2.2, 2), 0.28, color=LIGHT, zorder=3))
     ax.text(2.2, 0.2, "恒星（类太阳）", ha="center", fontsize=10)
     ax.add_patch(Circle((4.4, 2.6), 0.06, color=PLANET, zorder=3))
     ax.text(4.4, 2.85, "行星", ha="center", fontsize=10, color=PLANET)
     ax.annotate("", (4.33, 2.55), (2.5, 2.1), arrowprops=dict(arrowstyle="<->", color="0.3"))
     ax.text(3.1, 2.62, "0.1 角秒", fontsize=9, color="0.3", rotation=17, ha="center")
-    ax.text(6.0, 3.2, "亮度相差约 1000 万倍（10 µm）", fontsize=11, color="0.15")
-    ax.text(6.0, 2.5, "角距 0.1″ ≈ 从 2 公里外\n分辨相隔 1 毫米的两个点", fontsize=10, color="0.25", va="top")
-    ax.text(6.0, 1.2, "就像在灯塔旁边找一只萤火虫", fontsize=10, color=RED)
+    ax.text(5.6, 3.2, "亮度相差约 1000 万倍\n（波长 10 微米）", fontsize=11, color=NAVY)
+    ax.text(5.6, 2.1, "角距只有 0.1 角秒\n像从 2 公里外分辨相隔 1 毫米的两个点", fontsize=9, color=WARM, va="top")
+    ax.text(5.6, 0.75, "在灯塔旁边，寻找一只萤火虫", fontsize=9.5, color=DEEP_BLUE)
     return fig
 
 
@@ -148,7 +192,7 @@ def fig_bracewell_setup():
         # 光路到合束器
         ax.plot([xs[0], xs[0], -0.45], [-0.4, -2.0, -2.0], color="0.35", lw=1.4)
         ax.plot([xs[1], xs[1], 0.45], [-0.4, -2.0, -2.0], color="0.35", lw=1.4)
-        _box(ax, 1.1, -1.55, 1.05, 0.42, "翻转半个波长", fc="#FDE2E4", fs=8)
+        _box(ax, 1.1, -1.55, 1.25, 0.52, "半波长翻转", fc=LIGHT, fs=8)
         _box(ax, 0, -2.0, 0.9, 0.55, "合束器", fs=9)
         _arrow(ax, (-0.25, -2.3), (-1.2, -3.2), color=BRIGHT, lw=2)
         _arrow(ax, (0.25, -2.3), (1.2, -3.2), color=DARK, lw=2 if tilt > 0 else 1, ls="-" if tilt > 0 else ":")
@@ -215,13 +259,13 @@ def fig_xarray_combiner():
     ax = axs[0]
     L, q = 1.0, 3.0
     pos = [(L, q * L), (L, -q * L), (-L, -q * L), (-L, q * L)]
-    cols = ["#0072B2", "#009E73", "#009E73", "#0072B2"]
-    ax.plot([L, -L], [q, q], color="#0072B2", lw=1.5); ax.plot([L, -L], [-q, -q], color="#009E73", lw=1.5)
+    cols = [ACCENT_BLUE, DEEP_BLUE, DEEP_BLUE, ACCENT_BLUE]
+    ax.plot([L, -L], [q, q], color=ACCENT_BLUE, lw=1.5); ax.plot([L, -L], [-q, -q], color=DEEP_BLUE, lw=1.5)
     for k, ((x, y), c) in enumerate(zip(pos, cols)):
         ax.add_patch(Circle((x, y), 0.32, color=c, zorder=3))
         ax.text(x, y, str(k + 1), color="w", ha="center", va="center", fontsize=10, weight="bold", zorder=4)
-    ax.text(0, q + 0.55, "第 A 对", ha="center", color="#0072B2", fontsize=9.5)
-    ax.text(0, -q - 0.85, "第 B 对", ha="center", color="#009E73", fontsize=9.5)
+    ax.text(0, q + 0.55, "第 A 对", ha="center", color=ACCENT_BLUE, fontsize=9.5)
+    ax.text(0, -q - 0.85, "第 B 对", ha="center", color=DEEP_BLUE, fontsize=9.5)
     ax.annotate("", (-L, -q - 0.35), (L, -q - 0.35), arrowprops=dict(arrowstyle="<->", color="0.4"))
     ax.text(0, -q - 0.3, "b", ha="center", va="bottom", fontsize=9)
     ax.annotate("", (L + 0.6, -q), (L + 0.6, q), arrowprops=dict(arrowstyle="<->", color="0.4"))
@@ -232,18 +276,18 @@ def fig_xarray_combiner():
 
     ax = axs[1]
     ax.set_xlim(0, 10); ax.set_ylim(0, 6.2); ax.axis("off"); ax.set_aspect("equal")
-    for y, lab, c in [(5.3, "1", "#0072B2"), (4.4, "4", "#0072B2"), (2.2, "2", "#009E73"), (1.3, "3", "#009E73")]:
+    for y, lab, c in [(5.3, "1", ACCENT_BLUE), (4.4, "4", ACCENT_BLUE), (2.2, "2", DEEP_BLUE), (1.3, "3", DEEP_BLUE)]:
         ax.add_patch(Circle((0.5, y), 0.28, color=c)); ax.text(0.5, y, lab, color="w", ha="center", va="center", weight="bold")
         _arrow(ax, (0.8, y), (2.0, (4.85 if y > 3 else 1.75)), color=c, lw=1.3)
-    _box(ax, 2.9, 4.85, 1.7, 0.75, "A 对消零\n(1 − 4)", fc="#DCEBF7", fs=9)
-    _box(ax, 2.9, 1.75, 1.7, 0.75, "B 对消零\n(2 − 3)", fc="#DDF2EA", fs=9)
+    _box(ax, 2.9, 4.85, 1.7, 0.75, "A 对消零\n(1 − 4)", fc=LIGHT, fs=9)
+    _box(ax, 2.9, 1.75, 1.7, 0.75, "B 对消零\n(2 − 3)", fc=LIGHT, fs=9)
     _arrow(ax, (3.75, 4.85), (5.2, 3.55), color=DARK); _arrow(ax, (3.75, 1.75), (5.2, 2.85), color=DARK)
     ax.text(4.2, 4.55, "暗光 A", fontsize=8.5); ax.text(4.2, 1.95, "暗光 B", fontsize=8.5)
-    _box(ax, 6.0, 3.2, 1.6, 1.05, "交叉合束\n（错开 1/4 波长）", fc="#F1E3F3", fs=8.5)
+    _box(ax, 6.0, 3.2, 1.6, 1.05, "交叉合束\n（错开 1/4 波长）", fc=LIGHT, fs=8.5)
     _arrow(ax, (6.8, 3.5), (8.0, 4.6), color=DARK, lw=1.8); _arrow(ax, (6.8, 2.9), (8.0, 1.8), color=DARK, lw=1.8)
     _box(ax, 8.7, 4.85, 1.3, 0.6, "输出 3", fc="white", fs=9.5)
     _box(ax, 8.7, 1.55, 1.3, 0.6, "输出 4", fc="white", fs=9.5)
-    _box(ax, 8.7, 3.2, 1.5, 0.75, "3 − 4\n= 斩波信号", fc="#FFF4D6", fs=9)
+    _box(ax, 8.7, 3.2, 1.5, 0.75, "3 − 4\n= 斩波信号", fc=LIGHT, fs=9)
     _arrow(ax, (8.7, 4.5), (8.7, 3.6), color=RED, lw=1.2); _arrow(ax, (8.7, 1.9), (8.7, 2.8), color=RED, lw=1.2)
     ax.text(5.0, 0.25, "两级合束：先在每对内部消掉恒星，再把两对的暗光交叉混合成两路互为镜像的输出",
             ha="center", fontsize=8.5, color="0.3")
@@ -253,11 +297,11 @@ def fig_xarray_combiner():
 
 def fig_maps(T3, T4, ext_mas, planet_xy=None, ring_r=None, titles=("输出 3", "输出 4", "斩波 = 3 − 4")):
     fig, axs = plt.subplots(1, 3, figsize=(10.4, 3.5), constrained_layout=True)
-    for ax, img, t, cm, lo in zip(axs, [T3, T4, T3 - T4], titles, ["magma", "magma", "RdBu_r"], [0, 0, -1]):
+    for ax, img, t, cm, lo in zip(axs, [T3, T4, T3 - T4], titles, ["Blues", "Blues", SIGNED_CMAP], [0, 0, -1]):
         im = ax.imshow(img, extent=[-ext_mas, ext_mas, -ext_mas, ext_mas], cmap=cm, vmin=lo, vmax=1)
         ax.plot(0, 0, "*", color=STAR, ms=13, mec="k", mew=0.5)
         if planet_xy is not None:
-            ax.plot(*planet_xy, "o", ms=9, mfc="none", mec="#00E5FF" if cm == "magma" else "k", mew=2)
+            ax.plot(*planet_xy, "o", ms=9, mfc="none", mec=WARM if cm == "Blues" else NAVY, mew=2)
         if ring_r is not None:
             th = np.linspace(0, 2 * np.pi, 200)
             ax.plot(ring_r * np.cos(th), ring_r * np.sin(th), color=DUST, lw=2.5, alpha=0.9)
@@ -281,7 +325,7 @@ def fig_rotation(phi_deg, chop_map, ext_mas, planet_sky, track_xy, signal, phi_g
     Pr = P @ R.T
     ax.add_patch(Polygon(Pr, closed=True, fill=False, ec="0.5", lw=1))
     for k, (x, y) in enumerate(Pr):
-        ax.add_patch(Circle((x, y), 0.07, color=["#0072B2", "#009E73", "#009E73", "#0072B2"][k], zorder=3))
+        ax.add_patch(Circle((x, y), 0.07, color=[ACCENT_BLUE, DEEP_BLUE, DEEP_BLUE, ACCENT_BLUE][k], zorder=3))
     ax.plot(0, 0, "*", color=STAR, ms=14, mec="k", mew=0.5)
     ps = np.array(planet_sky) / np.max(np.abs(planet_sky)) * 0.55
     ax.plot(*ps, "o", color=PLANET, ms=8)
@@ -291,7 +335,7 @@ def fig_rotation(phi_deg, chop_map, ext_mas, planet_sky, track_xy, signal, phi_g
     ax.set_xlim(-1.05, 1.05); ax.set_ylim(-1.05, 1.05); ax.set_aspect("equal"); ax.axis("off")
     ax.set_title(f"天空中：阵列转到 {phi_deg:.0f}°", fontsize=10)
     ax = axs[1]
-    ax.imshow(chop_map, extent=[-ext_mas, ext_mas, -ext_mas, ext_mas], cmap="RdBu_r", vmin=-1, vmax=1)
+    ax.imshow(chop_map, extent=[-ext_mas, ext_mas, -ext_mas, ext_mas], cmap=SIGNED_CMAP, vmin=-1, vmax=1)
     ax.plot(track_xy[0], track_xy[1], color="k", lw=0.8, ls="--")
     i = int(np.argmin(np.abs(phi_grid_deg - phi_deg)))
     ax.plot(track_xy[0][i], track_xy[1][i], "o", color=PLANET, ms=9, mec="w", mew=1.5)

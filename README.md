@@ -34,7 +34,13 @@ streamlit run app.py
 - `app_common.py`：公共显示工具、章节参数保存与恢复、计算缓存
 - `.streamlit/config.toml`：蓝色主题配置
 
-导航架构参考 [jkanner/streamlit-audio 的 app.py](https://github.com/jkanner/streamlit-audio/blob/main/app.py)：使用 `st.radio` 选择章节，再调用对应的章节内容。物理计算与绘图仍各自放在模块中，便于维护。
+导航和教学节奏参考 [jkanner/streamlit-audio 的 app.py](https://github.com/jkanner/streamlit-audio/blob/main/app.py)：使用 `st.radio` 选择章节，先提出问题，再邀请读者改变一个参数、比较图形，最后解释观察结果。讲解用中文重新编写；物理计算与绘图仍各自放在模块中。
+
+## 部署与中文显示
+
+项目固定使用已验证的 `streamlit==1.65.0`，避免每次重新部署自动升级前端运行时。更新依赖后，让 Streamlit Community Cloud 完成重新构建，再刷新浏览器中的旧标签页。`Importing a module script failed` 是浏览器加载前端模块失败；如果仍出现，需核对失败的静态资源地址和 HTTP 状态。固定版本不会修复托管平台本身的静态资源故障。
+
+`assets/fonts/` 随项目附带 Noto Sans SC 中文字体及 SIL Open Font License。绘图时直接注册这个本地文件，Linux 云端不需要预装中文字体，也不会在打开页面时从外部字体网站下载。图标题按实际字宽换行，图片以留有边距的 PNG 展示，避免中文变方框或被裁切。
 
 模型假定仪器是理想的，唯一的噪声是光子噪声。参数实验室首次切换到新的组合时需要计算约 1–2 秒，之后会缓存。
 
