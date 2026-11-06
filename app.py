@@ -84,89 +84,6 @@ def render_rotation():
     C.think("转了半圈之后，信号和前半圈有什么关系？",
             "正好反号。转半圈后，行星走到了对称点上，而斩波图在对称点上颜色相反。看右图：180° 之后的曲线是前 180° 的\"倒影\"。")
 
-def render_photon_noise():
-    C.goal("""
-    多收集一些光子，再延长观测时间，比较随机起伏和信号的变化。
-    """)
-
-    st.header("像接雨滴一样数光子")
-    st.markdown("""
-    接下来，我们把随机起伏也放进实验里。
-
-    探测器接收光，可以想成在数一颗颗到达的光子。它们不会按固定节奏排队到达，就像雨滴落进杯子一样：
-    即使每次接雨的时间相同，接到的滴数也会有多有少。这种起伏叫做**光子噪声**。
-
-    下面重复了 3000 次计数。每次的平均光子数是 N，但实际计数会围着 N 分布，典型起伏约为 **√N**。
-
-    **试试看：** 把 N 从 100 调到 10000。直方图的宽度怎样变？旁边的「相对起伏」又怎样变？
-    """)
-    c1, c2 = st.columns([1, 2.4])
-    with c1:
-        N = st.select_slider("平均每次接到的光子数 N", options=[10, 30, 100, 300, 1000, 3000, 10000], value=C.control_value('lesson_6_N', 100), key='lesson_6_N')
-        st.metric("起伏大小 √N", f"{np.sqrt(N):.0f}")
-        st.metric("相对起伏 √N / N", f"{1 / np.sqrt(N):.1%}")
-    with c2:
-        rng = np.random.default_rng(0)
-        x = rng.poisson(N, 3000)
-        fig, ax = plt.subplots(figsize=(7, 2.6))
-        ax.hist(x, bins=40, color=S.GREY)
-        ax.axvline(N, color="k", lw=1.5); ax.axvspan(N - np.sqrt(N), N + np.sqrt(N), color=S.BRIGHT, alpha=0.35)
-        ax.set_xlabel("一次接到的光子数"); ax.set_ylabel("次数"); ax.set_title("重复 3000 次的结果：浅蓝色带宽约 ±√N")
-        C.show(fig)
-    st.markdown("""
-    **比较一下：** 光子越多，计数起伏的绝对大小越大；但起伏占总数的比例反而越小。测量因此变得更稳定。
-    """)
-
-    st.markdown("第四节已经把光子按来源分开，并比较了行星能否找到。这里单独观察随机起伏怎样随计数和时间改变。")
-    bd = C.bundle()
-    bud, inst = bd["bud"], bd["inst"]
-    wl = inst["wl"] * 1e6
-
-    st.header("信噪比：信号比噪声大多少倍")
-    st.latex(r"\mathrm{SNR} \approx \frac{N_{\mathrm{planet}}}{\sqrt{N_{\mathrm{background}}}}")
-    st.markdown("""
-    我们用**信噪比**，简称 SNR，比较行星信号和噪声的大小。SNR 越高，信号通常越容易辨认。
-
-    在这个只考虑光子噪声的模型里，观测时间增加一倍，信号增加一倍，噪声只增加到原来的 √2 倍。
-    因此，**SNR 与观测时间的平方根成正比**。
-
-    **试试看：** 保持波长不变，把观测时间从 10 小时调到 40 小时。右图的点更接近曲线了吗？总 SNR 是否大约变成了两倍？
-    这里用 SNR = 5 作为比较观测方案的参考门槛；真实探测还需要检查统计假设和其他噪声。
-    """)
-    c1, c2 = st.columns([1, 2.4])
-    with c1:
-        hours = st.slider("观测时间（小时）", 1.0, 50.0, C.control_value('lesson_6_hours', 10.0), 1.0, key='lesson_6_hours')
-        w = st.select_slider("看哪个波长的数据（微米）", options=[f"{v:.1f}" for v in wl], value=C.control_value('lesson_6_w', f"{wl[22]:.1f}"), key='lesson_6_w')
-        wi = [f"{v:.1f}" for v in wl].index(w)
-        snr = bud["snr_total"] * np.sqrt(hours / 10)
-        st.metric("全部波长合起来的 SNR", f"{snr:.1f}", delta="已达到 5" if snr >= 5 else "还不到 5")
-        st.metric("达到 SNR = 5 需要", f"{10 * (5 / bud['snr_total']) ** 2:.1f} 小时")
-    with c2:
-        f = hours / 10
-        rng = np.random.default_rng(1)
-        e3, e4 = bd["e3"][wi] * f, bd["e4"][wi] * f
-        data = rng.poisson(e3) - rng.poisson(e4)
-        phis = np.rad2deg(bd["samp"]["phi"])
-        sig = np.sqrt((e3 + e4).mean())
-        fig, ax = plt.subplots(figsize=(7.4, 3.0))
-        ax.plot(phis, data, ".", ms=3, color=S.GREY, label=f"测到的斩波数据（每 1° 一个点，噪声约 ±{sig:.0f}）")
-        ax.plot(phis, bd["pchop"][wi] * f, color=S.PLANET, lw=1.8, label="行星信号（没有噪声时）")
-        ax.axhline(0, color="0.8", lw=0.6)
-        ax.set_xlabel("阵列转过的角度（°）"); ax.set_ylabel("光子数")
-        ax.legend(loc="lower left", bbox_to_anchor=(0, 1.0), ncol=2, fontsize=8.5)
-        ax.set_title(f"{wl[wi]:.1f} µm 处，观测 {hours:g} 小时的单个波长数据", pad=24)
-        C.show(fig)
-    st.markdown("""
-    单个波长的点可能仍很乱。我们还可以把多个波长、多个旋转角度的信息合起来，利用它们共同支持的信号。下一节用一条固定曲线练习匹配。
-    """)
-
-    st.success("""
-    **记住这个比例：** 在光子噪声主导、其他条件相同时，SNR 提高到两倍，需要约四倍的观测时间。
-    """)
-    C.think("要把 SNR 从 5 提高到 10，观测时间要变成多少倍？", "SNR ∝ √时间，SNR 翻倍需要 4 倍的时间。")
-    C.think("为什么短波长的数据几乎没用？",
-            "短波长时行星本身很暗（它的温度只有约 255 K，主要在长波长发光），而恒星漏光又最多（零深 ∝ 1/λ²）。信号小、噪声大。")
-
 def render_photon_sources(observation):
     st.header("暗输出里的光子从哪里来")
     st.markdown("现在把两路暗输出收到的光子按来源分开。下面的图使用上方当前参数，并让阵列完整旋转一圈。先看看短波长，再看看长波长：主要背景一样吗？")
@@ -332,7 +249,7 @@ def render_matched_filter():
         ax.legend(fontsize=8)
         C.show(fig)
         st.markdown(f"这组数据的最高分在 **{best:.0f} mas**；生成数据时用的是 **115 mas（1.15 au）**。噪声会让最佳估计偏离真实值，旁瓣也可能产生其他峰。")
-    C.think("为什么只调距离，不够完成真实的行星搜索？", "这里预先固定了方位角，只搜索一维距离。第四节会同时扫描两个天空坐标，并把多个波长一起纳入匹配。真实探测还要评估虚警率和模型误差。")
+    C.think("为什么只调距离，不够完成真实的行星搜索？", "这里预先固定了方位角，只搜索一维距离。第二节会同时扫描两个天空坐标，并把多个波长一起纳入匹配。真实探测还要评估虚警率和模型误差。")
     st.caption("方法背景：[LIFE II：信号模拟与提取](https://arxiv.org/abs/2203.00471)。此处为固定方位角、单波长的教学简化。")
 
 
@@ -365,7 +282,7 @@ def render_contrast():
 def render_null_depth():
     C.goal("把对比度与消零深度分开：一个描述光源，另一个描述恒星光被压低了多少。")
     st.markdown("""
-    上一节的 C 是行星与恒星的通量比。现在我们调节仪器，看看能把恒星压暗到什么程度。
+    刚才的 C 是行星与恒星的通量比。现在我们调节仪器，看看能把恒星压暗到什么程度。
     在这个双光束实验里，把**暗输出强度除以亮输出强度**记作消零深度 N。数值越小，消零越深。
 
     **试试看：** 先把两束光的振幅比设成 1、残余相位误差设成 0°。再只改变其中一项。
@@ -456,15 +373,34 @@ def render_sky_lab():
     render_planet_search(observation)
 
 
+def render_foundations():
+    st.subheader("1.1 光的干涉")
+    render_interference()
+    st.divider()
+    st.subheader("1.2 对比度")
+    render_contrast()
+    st.divider()
+    st.subheader("1.3 消零深度")
+    render_null_depth()
+
+
+def render_rotation_and_matching():
+    st.subheader("3.1 旋转阵列")
+    render_rotation()
+    st.divider()
+    st.subheader("3.2 匹配滤波 matched filter")
+    st.markdown("刚才，已知行星的位置会给出一条旋转曲线。现在反过来：从观测曲线出发，试着猜出行星离恒星有多远。")
+    render_matched_filter()
+
+
 SECTIONS = {
-    1: ("光的干涉", "先叠加两列波", render_interference),
-    2: ("对比度", "再比较恒星和行星有多亮", render_contrast),
-    3: ("消零深度", "看看恒星光被压低了多少", render_null_depth),
-    4: ("恒星、行星与黄道尘", "从天空贡献、光子来源到行星可探测性", render_sky_lab),
-    5: ("进阶：旋转阵列", "从空间位置到信号形状", render_rotation),
-    6: ("进阶：光子噪声", "背景平均值抵消后，噪声还在", render_photon_noise),
-    7: ("匹配滤波 matched filter", "调节星—行星距离，匹配斩波观测", render_matched_filter),
+    1: ("基础概念：干涉、对比度与消零深度", "先理解三个概念，再把它们连起来", render_foundations),
+    2: ("恒星、行星与黄道尘", "从天空贡献、光子来源到行星可探测性", render_sky_lab),
+    3: ("旋转阵列与匹配滤波", "先看信号怎样形成，再用形状匹配距离", render_rotation_and_matching),
 }
+
+# 保留原控件键，以便合并后各组参数仍可独立保存。
+SECTION_CONTROLS = {1: (1, 2, 3), 2: (4,), 3: (5, 7)}
 
 
 def section_label(index):
@@ -479,7 +415,8 @@ def main():
     _, subtitle, render = SECTIONS[section]
     st.header(section_label(section)); st.caption(subtitle)
     render()
-    C.save_controls(section)
+    for controls in SECTION_CONTROLS[section]:
+        C.save_controls(controls)
 
 
 if __name__ == "__main__":

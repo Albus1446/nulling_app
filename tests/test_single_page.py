@@ -25,12 +25,12 @@ class SinglePageTests(unittest.TestCase):
 
     def test_all_sections_and_simulation_actions(self):
         app = self.app()
-        self.assertEqual(len(app.radio(key="curriculum_section").options), 7)
-        for section in range(1, 8):
+        self.assertEqual(len(app.radio(key="curriculum_section").options), 3)
+        for section in range(1, 4):
             with self.subTest(section=section):
                 self.select(app, section)
 
-        self.select(app, 4)
+        self.select(app, 2)
         app.slider(key="lesson_4_ts").set_value(5779.0).run()
         self.assert_no_error(app)
         self.assertEqual(app.slider(key="lesson_4_ts").value, 5779.0)
@@ -49,11 +49,8 @@ class SinglePageTests(unittest.TestCase):
         self.assert_no_error(app)
         self.assertTrue(any("/ 100" in metric.value for metric in app.metric))
 
-        self.select(app, 5)
+        self.select(app, 3)
         self.assertFalse(any("不同位置，不同指纹" in h.value for h in app.header))
-        self.select(app, 6)
-        self.assertFalse(any(h.value == "暗输出里的光子从哪里来" for h in app.header))
-        self.select(app, 7)
         seed = app.session_state['matched_seed']
         before = float(app.metric[0].value)
         app.slider(key='lesson_7_separation').set_value(115.).run()
@@ -70,25 +67,29 @@ class SinglePageTests(unittest.TestCase):
         app.slider(key="lesson_1_dphi").set_value(180).run()
         self.assert_no_error(app)
 
-        self.select(app, 2)
         app.slider(key="lesson_2_D").set_value(20.0).run()
         self.assert_no_error(app)
-        self.select(app, 3)
         self.assertEqual(app.slider(key="lesson_3_amp").value, 1.0)
         app.slider(key="lesson_3_amp").set_value(1.1).run()
         self.assert_no_error(app)
 
+        self.select(app, 3)
+        app.slider(key="lesson_5_phi").set_value(120).run()
+        self.assert_no_error(app)
+        app.slider(key="lesson_7_separation").set_value(115.).run()
+        self.assert_no_error(app)
         self.select(app, 1)
         self.assertEqual(app.slider(key="lesson_1_dphi").value, 180)
         self.assertTrue(any("相位差 **180°**" in text.value for text in app.markdown))
-        self.select(app, 2)
         self.assertEqual(app.slider(key="lesson_2_D").value, 20.0)
-        self.select(app, 3)
         self.assertEqual(app.slider(key="lesson_3_amp").value, 1.1)
+        self.select(app, 3)
+        self.assertEqual(app.slider(key="lesson_5_phi").value, 120)
+        self.assertEqual(app.slider(key="lesson_7_separation").value, 115.)
 
     def test_original_entry_opens_the_same_single_page_app(self):
         app = self.app("首页.py")
-        self.assertEqual(len(app.radio(key="curriculum_section").options), 7)
+        self.assertEqual(len(app.radio(key="curriculum_section").options), 3)
         self.select(app, 1)
         self.assertEqual(app.slider(key="lesson_1_dphi").value, 150)
 
