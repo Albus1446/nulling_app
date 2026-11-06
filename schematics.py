@@ -4,6 +4,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib import font_manager
+from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.patches import Circle, FancyBboxPatch, FancyArrowPatch, Polygon, Rectangle, Arc
 from pathlib import Path
@@ -55,6 +56,9 @@ style()
 
 def prepare_figure(fig):
     """按实际字宽换行标题，并为轴标签、图例预留空间。"""
+    # 云端热更新后可能保留基础画布；文字测量与 PNG 输出需要 Agg 渲染器。
+    if not isinstance(fig.canvas, FigureCanvasAgg):
+        FigureCanvasAgg(fig)
     if fig.get_layout_engine() is None:
         fig.set_layout_engine("constrained")
     fig.canvas.draw()

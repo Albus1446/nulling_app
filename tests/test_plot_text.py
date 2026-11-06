@@ -7,11 +7,24 @@ import warnings
 import matplotlib.pyplot as plt
 from matplotlib import font_manager
 from matplotlib.ft2font import FT2Font
+from matplotlib.backend_bases import FigureCanvasBase
+from io import BytesIO
 
 import schematics as S
 
 
 class PlotTextTests(unittest.TestCase):
+    def test_base_canvas_after_hot_reload_can_measure_and_export_png(self):
+        fig = S.fig_two_waves(150)
+        try:
+            FigureCanvasBase(fig)
+            S.prepare_figure(fig)
+            output = BytesIO()
+            fig.savefig(output, format='png')
+            self.assertTrue(output.getvalue().startswith(b'\x89PNG'))
+        finally:
+            plt.close(fig)
+
     def test_all_chinese_characters_have_glyphs_in_bundled_font(self):
         root = Path(__file__).resolve().parents[1]
         source = "".join((root / name).read_text() for name in ["app.py", "app_common.py", "schematics.py", "optics.py"])
