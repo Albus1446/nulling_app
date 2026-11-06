@@ -479,12 +479,12 @@ def render_sky_lab():
     c1, c2, c3 = st.columns(3)
     with c1:
         st.subheader("目标恒星")
-        ts = st.slider("恒星温度（K）", 3000., 8000., C.control_value('lesson_5_ts', 5778.), 100., key='lesson_5_ts')
+        ts = st.slider("恒星温度（K）", 3000., 8000., C.control_value('lesson_5_ts', 5778.), 1., key='lesson_5_ts', format='%.0f')
         rs = st.slider("恒星半径（太阳半径）", .3, 2., C.control_value('lesson_5_rs', 1.), .1, key='lesson_5_rs')
         distance = st.slider("系统距离（pc）", 3., 30., C.control_value('lesson_5_distance', 10.), .5, key='lesson_5_distance')
     with c2:
         st.subheader("行星")
-        tp = st.slider("行星温度（K）", 150., 450., C.control_value('lesson_5_tp', 255.), 5., key='lesson_5_tp')
+        tp = st.slider("行星温度（K）", 150., 450., C.control_value('lesson_5_tp', 255.), 5., key='lesson_5_tp', format='%.0f')
         rp = st.slider("行星半径（地球半径）", .5, 3., C.control_value('lesson_5_rp', 1.), .1, key='lesson_5_rp')
         orbit = st.slider("投影分离距离（au）", .2, 3., C.control_value('lesson_5_orbit', 1.), .1, key='lesson_5_orbit')
         pa = st.slider("行星方位角（度）", 0., 350., C.control_value('lesson_5_planet_pa', 40.), 5., key='lesson_5_planet_pa')

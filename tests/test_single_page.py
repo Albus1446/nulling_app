@@ -31,6 +31,9 @@ class SinglePageTests(unittest.TestCase):
                 self.select(app, section)
 
         self.select(app, 5)
+        app.slider(key="lesson_5_ts").set_value(5779.0).run()
+        self.assert_no_error(app)
+        self.assertEqual(app.slider(key="lesson_5_ts").value, 5779.0)
         app.slider(key="lesson_5_rp").set_value(2.0).run()
         self.assert_no_error(app)
         app.radio(key="lesson_5_component").set_value("行星").run()
